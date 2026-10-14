@@ -26,7 +26,7 @@ func Logging(log logger.Logger) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(rec, req.WithContext(logger.WithLogger(req.Context(), reqLog)))
 
-			accessLog := reqLog.WithFields(logger.Fields{
+			accessLog := reqLog.WithContext(req.Context()).WithFields(logger.Fields{
 				"status":   rec.status,
 				"bytes":    rec.bytes,
 				"duration": time.Since(start).String(),

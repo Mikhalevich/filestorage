@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler"
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/middleware"
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/config"
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
+	"github.com/Mikhalevich/filestorage/internal/infra/tracing"
 )
 
 const (
@@ -22,7 +25,11 @@ func Start(ctx context.Context, cfg config.HTTPServer) error {
 	if err := startServer(
 		ctx,
 		cfg,
-		middleware.Logging(logger.FromContext(ctx))(createMux(handler.New())),
+		middleware.Tracing(tracing.StdTracer())(
+			middleware.Logging(logger.FromContext(ctx))(
+				createMux(handler.New()),
+			),
+		),
 	); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
@@ -84,6 +91,7 @@ func (h HandlerFunc) ToHTTPHandlerFunc() http.HandlerFunc {
 	return func(rspWriter http.ResponseWriter, r *http.Request) {
 		if err := h(rspWriter, r); err != nil {
 			logger.FromContext(r.Context()).WithError(err).Error("handler error")
+			trace.SpanFromContext(r.Context()).RecordError(err)
 
 			if httpErr, ok := errors.AsType[*httperror.HTTPError](err); ok {
 				http.Error(rspWriter, httpErr.Msg, errorStatus(httpErr.Status))
