@@ -35,10 +35,5 @@ func (hook *OtelFieldsHook) Fire(entry *logrus.Entry) error {
 
 // Levels returns logrus levels on which this hook is fired.
 func (hook *OtelFieldsHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-	}
+	return logrus.AllLevels
 }

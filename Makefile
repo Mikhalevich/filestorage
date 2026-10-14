@@ -17,7 +17,7 @@ install-linter lint fmt tools-update \
 all: build
 
 build:
-	$(GOPRIVATE) go build -mod=vendor -o $(BIN_PATH)/web ./cmd/web/main.go
+	$(GOPRIVATE) go build -mod=vendor -o $(BIN_PATH)/web ./cmd/web
 
 run-web:
 	./bin/web -config=./config/config-web.yaml

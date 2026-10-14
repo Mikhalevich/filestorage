@@ -16,15 +16,7 @@ type Logrus struct {
 }
 
 func NewLogrus() *Logrus {
-	logger := logrus.New()
-	logger.SetOutput(os.Stdout)
-	logger.SetFormatter(&logrus.JSONFormatter{})
-
-	instrumentOtel(logger)
-
-	return &Logrus{
-		l: logrus.NewEntry(logger),
-	}
+	return newLogrus(logrus.InfoLevel)
 }
 
 func NewLogrusWithLevel(lvl string) (*Logrus, error) {
@@ -33,6 +25,10 @@ func NewLogrusWithLevel(lvl string) (*Logrus, error) {
 		return nil, fmt.Errorf("parse log level: %w", err)
 	}
 
+	return newLogrus(level), nil
+}
+
+func newLogrus(level logrus.Level) *Logrus {
 	logger := logrus.New()
 	logger.SetLevel(level)
 	logger.SetOutput(os.Stdout)
@@ -42,7 +38,7 @@ func NewLogrusWithLevel(lvl string) (*Logrus, error) {
 
 	return &Logrus{
 		l: logrus.NewEntry(logger),
-	}, nil
+	}
 }
 
 func instrumentOtel(logger *logrus.Logger) {

@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
@@ -25,8 +26,11 @@ type Tracer interface {
 }
 
 type OtelTracer struct {
-	Name string
+	Name     string
+	provider *sdktrace.TracerProvider
 }
+
+type ShutdownFn func(ctx context.Context) error
 
 func NewOtelTracer(
 	endpoint string,
@@ -37,9 +41,6 @@ func NewOtelTracer(
 		context.Background(),
 		otlptracehttp.NewClient(
 			otlptracehttp.WithEndpoint(endpoint),
-			otlptracehttp.WithHeaders(map[string]string{
-				"content-type": "application/json",
-			}),
 			otlptracehttp.WithInsecure(),
 		),
 	)
@@ -47,13 +48,14 @@ func NewOtelTracer(
 		return nil, fmt.Errorf("creating exporter: %w", err)
 	}
 
+	attrs := []attribute.KeyValue{semconv.ServiceName(name)}
+	if version != "" {
+		attrs = append(attrs, semconv.ServiceVersion(version))
+	}
+
 	res, err := resource.Merge(
 		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(name),
-			semconv.ServiceVersion(version),
-		),
+		resource.NewWithAttributes(semconv.SchemaURL, attrs...),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("merge resource: %w", err)
@@ -68,8 +70,18 @@ func NewOtelTracer(
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return &OtelTracer{
-		Name: name,
+		Name:     name,
+		provider: tracerprovider,
 	}, nil
+}
+
+// Shutdown flushes pending spans and stops the exporter.
+func (t *OtelTracer) Shutdown(ctx context.Context) error {
+	if err := t.provider.Shutdown(ctx); err != nil {
+		return fmt.Errorf("tracer provider shutdown: %w", err)
+	}
+
+	return nil
 }
 
 func (t *OtelTracer) StartSpan(ctx context.Context, spanName string) (context.Context, trace.Span) {
@@ -101,13 +113,13 @@ func SetupTracer(
 	endpoint string,
 	name string,
 	version string,
-) error {
-	tr, err := NewOtelTracer(endpoint, name, version)
+) (ShutdownFn, error) {
+	otelTracer, err := NewOtelTracer(endpoint, name, version)
 	if err != nil {
-		return fmt.Errorf("creating otel tracer: %w", err)
+		return nil, fmt.Errorf("creating otel tracer: %w", err)
 	}
 
-	std = tr
+	std = otelTracer
 
-	return nil
+	return otelTracer.Shutdown, nil
 }

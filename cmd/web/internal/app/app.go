@@ -41,10 +41,8 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 			WriteTimeout: cfg.WriteTimeout,
 		}
 
-		srvErrCh = make(chan error)
+		srvErrCh = make(chan error, 1)
 	)
-
-	defer close(srvErrCh)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

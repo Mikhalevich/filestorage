@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 
@@ -10,9 +11,13 @@ import (
 )
 
 func LoadConfig(cfg any) error {
-	configFile := flag.String("config", "config/config.yaml", "consumer worker config file")
+	configFile := flag.String("config", "", "path to the service config file (required)")
 
 	flag.Parse()
+
+	if *configFile == "" {
+		return errors.New("-config flag is required")
+	}
 
 	if err := configor.Load(cfg, *configFile); err != nil {
 		return fmt.Errorf("load config: %w", err)
