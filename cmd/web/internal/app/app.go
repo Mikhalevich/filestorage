@@ -7,7 +7,14 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler"
+	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
+	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/middleware"
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/config"
+	"github.com/Mikhalevich/filestorage/internal/infra/logger"
+	"github.com/Mikhalevich/filestorage/internal/infra/tracing"
 )
 
 const (
@@ -15,21 +22,19 @@ const (
 )
 
 func Start(ctx context.Context, cfg config.HTTPServer) error {
-	if err := startServer(ctx, cfg, createMux()); err != nil {
+	if err := startServer(
+		ctx,
+		cfg,
+		middleware.Tracing(tracing.StdTracer())(
+			middleware.Logging(logger.FromContext(ctx))(
+				createMux(handler.New()),
+			),
+		),
+	); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
 
 	return nil
-}
-
-func createMux() http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "it works!!!")
-	})
-
-	return mux
 }
 
 func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handler) error {
@@ -65,4 +70,44 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 	}
 
 	return nil
+}
+
+func createMux(h *handler.Handler) http.Handler {
+	mux := http.NewServeMux()
+
+	registerHandler(mux, "/test", h.Test)
+	registerHandler(mux, "/error_test", h.ErrorTest)
+
+	return mux
+}
+
+func registerHandler(mux *http.ServeMux, path string, h HandlerFunc) {
+	mux.HandleFunc(path, h.ToHTTPHandlerFunc())
+}
+
+type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
+
+func (h HandlerFunc) ToHTTPHandlerFunc() http.HandlerFunc {
+	return func(rspWriter http.ResponseWriter, r *http.Request) {
+		if err := h(rspWriter, r); err != nil {
+			logger.FromContext(r.Context()).WithError(err).Error("handler error")
+			trace.SpanFromContext(r.Context()).RecordError(err)
+
+			if httpErr, ok := errors.AsType[*httperror.HTTPError](err); ok {
+				http.Error(rspWriter, httpErr.Msg, errorStatus(httpErr.Status))
+
+				return
+			}
+
+			http.Error(rspWriter, "Internal server error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func errorStatus(status int) int {
+	if status < http.StatusBadRequest || status > 599 {
+		return http.StatusInternalServerError
+	}
+
+	return status
 }

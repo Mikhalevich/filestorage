@@ -14,6 +14,10 @@ func NewNoopTracer() *noopTracer {
 	return &noopTracer{}
 }
 
-func (t *noopTracer) StartSpan(ctx context.Context, spanName string) (context.Context, trace.Span) {
+func (t *noopTracer) StartSpan(
+	ctx context.Context,
+	spanName string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
 	return ctx, noop.Span{}
 }

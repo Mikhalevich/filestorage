@@ -22,7 +22,7 @@ var (
 )
 
 type Tracer interface {
-	StartSpan(ctx context.Context, spanName string) (context.Context, trace.Span)
+	StartSpan(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span)
 }
 
 type OtelTracer struct {
@@ -84,18 +84,26 @@ func (t *OtelTracer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (t *OtelTracer) StartSpan(ctx context.Context, spanName string) (context.Context, trace.Span) {
+func (t *OtelTracer) StartSpan(
+	ctx context.Context,
+	spanName string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
 	tr := otel.Tracer(t.Name)
 	//nolint:spancheck
-	return tr.Start(ctx, spanName)
+	return tr.Start(ctx, spanName, opts...)
 }
 
 func StartSpan(ctx context.Context) (context.Context, trace.Span) {
 	return std.StartSpan(ctx, callingFuncName())
 }
 
-func StartSpanName(ctx context.Context, spanName string) (context.Context, trace.Span) {
-	return std.StartSpan(ctx, spanName)
+func StartSpanName(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	return std.StartSpan(ctx, spanName, opts...)
+}
+
+func StdTracer() Tracer {
+	return std
 }
 
 func callingFuncName() string {

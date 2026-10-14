@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage: the only binary is `cmd/web`, and it serves just a `/test` endpoint.
+Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage: the only binary is `cmd/web`, and it serves only the `/test` and `/error_test` (always returns 500) endpoints.
 
 **Startup flow** (`cmd/web/main.go` → `internal/infra/application.Run`):
 1. `LoadConfig` parses the `-config` flag, which is required and has no default, and loads YAML with `jinzhu/configor` into the binary's config struct. Struct tags `required:"true"` enforce required fields.
@@ -45,5 +45,9 @@ To add a new binary, follow the `cmd/web` layout:
 **HTTP server** (`cmd/web/internal/app`):
 - Uses a stdlib `http.ServeMux`. The port and read/write timeouts come from the `http_server` config section (`config.HTTPServer`, passed in via `setup.Start`). Timeouts are written as Go duration strings (`10s`), which yaml.v3 decodes into `time.Duration`.
 - Shuts down gracefully when the context is cancelled, with a 60s timeout.
+- Handlers live in `cmd/web/internal/app/handler` and have the signature `func(w http.ResponseWriter, r *http.Request) error` (`app.HandlerFunc`). Register them with `registerHandler`, which adapts them through `ToHTTPHandlerFunc`:
+  - Return `*httperror.HTTPError` (e.g. `httperror.InternalServerError(msg)`) to send that status and message. Use the pointer: `HTTPError` has a pointer receiver, and the adapter matches only `*HTTPError`. A status outside 400–599 is replaced with 500.
+  - Any other error is sent as a generic 500 "Internal server error".
+  - If the handler has already written headers or body before returning an error, nothing more is written to the response.
 
 Config files live in `config/`. Only `config-web-example.yaml` is committed: when you add a config field, add it there too. The tracing endpoint `jaeger:4318` assumes a docker-compose network.
