@@ -79,15 +79,23 @@ func registerHandler(mux *http.ServeMux, path string, h HandlerFunc) {
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
 func (h HandlerFunc) ToHTTPHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := h(w, r); err != nil {
-			if httpErr, ok := errors.AsType[httperror.HTTPError](err); ok {
-				http.Error(w, httpErr.Msg, httpErr.Status)
+	return func(rspWriter http.ResponseWriter, r *http.Request) {
+		if err := h(rspWriter, r); err != nil {
+			if httpErr, ok := errors.AsType[*httperror.HTTPError](err); ok {
+				http.Error(rspWriter, httpErr.Msg, errorStatus(httpErr.Status))
 
 				return
 			}
 
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(rspWriter, "Internal server error", http.StatusInternalServerError)
 		}
 	}
+}
+
+func errorStatus(status int) int {
+	if status < http.StatusBadRequest || status > 599 {
+		return http.StatusInternalServerError
+	}
+
+	return status
 }

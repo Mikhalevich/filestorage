@@ -10,12 +10,12 @@ type HTTPError struct {
 	Msg    string
 }
 
-func (e HTTPError) Error() string {
+func (e *HTTPError) Error() string {
 	return fmt.Sprintf("status: %d, msg: %s", e.Status, e.Msg)
 }
 
-func InternalServerError(msg string) HTTPError {
-	return HTTPError{
+func InternalServerError(msg string) *HTTPError {
+	return &HTTPError{
 		Status: http.StatusInternalServerError,
 		Msg:    msg,
 	}

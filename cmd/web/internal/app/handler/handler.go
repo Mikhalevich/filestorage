@@ -15,7 +15,7 @@ func New() *Handler {
 }
 
 func (h *Handler) Test(w http.ResponseWriter, r *http.Request) error {
-	fmt.Fprintln(w, "It words!!!")
+	fmt.Fprintln(w, "It works!!!")
 
 	return nil
 }
