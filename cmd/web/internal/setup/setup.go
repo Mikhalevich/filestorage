@@ -12,7 +12,7 @@ func Start(
 	ctx context.Context,
 	cfg config.Config,
 ) error {
-	if err := app.Start(ctx); err != nil {
+	if err := app.Start(ctx, cfg.HTTPServer); err != nil {
 		return fmt.Errorf("start app: %w", err)
 	}
 

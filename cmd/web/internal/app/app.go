@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/Mikhalevich/filestorage/cmd/web/internal/config"
 )
 
 const (
-	readTimeout     = time.Second * 30
-	writeTimeout    = time.Second * 30
 	shutdownTimeout = time.Second * 60
 )
 
-func Start(ctx context.Context) error {
-	if err := startServer(ctx, createMux()); err != nil {
+func Start(ctx context.Context, cfg config.HTTPServer) error {
+	if err := startServer(ctx, cfg, createMux()); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
 
@@ -32,13 +32,13 @@ func createMux() http.Handler {
 	return mux
 }
 
-func startServer(ctx context.Context, handler http.Handler) error {
+func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handler) error {
 	var (
 		srv = &http.Server{
-			Addr:         ":80",
+			Addr:         fmt.Sprintf(":%d", cfg.Port),
 			Handler:      handler,
-			ReadTimeout:  readTimeout,
-			WriteTimeout: writeTimeout,
+			ReadTimeout:  cfg.ReadTimeout,
+			WriteTimeout: cfg.WriteTimeout,
 		}
 
 		srvErrCh = make(chan error)

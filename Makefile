@@ -11,28 +11,22 @@ GOPRIVATE = GOPRIVATE=github.com/Mikhalevich/
 LINTER_NAME := golangci-lint
 LINTER_VERSION := v2.14.0
 
-.PHONY: all build test bench compose-up compose-down load-test-data vendor install-linter \
-lint fmt tools-update generate load-assets \
-minikube-load-images minikube-decrypt-secrets minikube-encrypt-secrets minikube-helm-install minikube-helm-uninstall \
-install-helm-secrets generate-helm-secrets \
-do-helm-load-images do-helm-encrypt-secrets do-helm-install do-helm-uninstall
+.PHONY: all build run-web test bench vendor \
+install-linter lint fmt tools-update \
 
 all: build
 
 build:
 	$(GOPRIVATE) go build -mod=vendor -o $(BIN_PATH)/web ./cmd/web/main.go
 
+run-web:
+	./bin/web -config=./config/config-web.yaml
+
 test:
 	go test ./...
 
 bench:
 	go test -bench=. -benchmem ./...
-
-compose-up:
-	docker compose -f ./script/docker/docker-compose.yml up --build
-
-compose-down:
-	docker compose -f ./script/docker/docker-compose.yml down
 
 vendor:
 	$(GOPRIVATE) go mod tidy
@@ -53,6 +47,3 @@ fmt: install-linter
 
 tools-update:
 	go get tool
-
-generate:
-	$(ENV_PATH) go generate ./...
