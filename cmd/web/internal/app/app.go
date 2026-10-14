@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler"
+	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/config"
 )
 
@@ -15,21 +17,15 @@ const (
 )
 
 func Start(ctx context.Context, cfg config.HTTPServer) error {
-	if err := startServer(ctx, cfg, createMux()); err != nil {
+	if err := startServer(
+		ctx,
+		cfg,
+		createMux(handler.New()),
+	); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
 
 	return nil
-}
-
-func createMux() http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "it works!!!")
-	})
-
-	return mux
 }
 
 func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handler) error {
@@ -65,4 +61,33 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 	}
 
 	return nil
+}
+
+func createMux(h *handler.Handler) http.Handler {
+	mux := http.NewServeMux()
+
+	registerHandler(mux, "/test", h.Test)
+	registerHandler(mux, "/error_test", h.ErrorTest)
+
+	return mux
+}
+
+func registerHandler(mux *http.ServeMux, path string, h HandlerFunc) {
+	mux.HandleFunc(path, h.ToHTTPHandlerFunc())
+}
+
+type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
+
+func (h HandlerFunc) ToHTTPHandlerFunc() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := h(w, r); err != nil {
+			if httpErr, ok := errors.AsType[httperror.HTTPError](err); ok {
+				http.Error(w, httpErr.Msg, httpErr.Status)
+
+				return
+			}
+
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+	}
 }
