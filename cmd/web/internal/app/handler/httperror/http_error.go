@@ -20,3 +20,17 @@ func InternalServerError(msg string) *HTTPError {
 		Msg:    msg,
 	}
 }
+
+func BadRequest(msg string) *HTTPError {
+	return &HTTPError{
+		Status: http.StatusBadRequest,
+		Msg:    msg,
+	}
+}
+
+func NotFound(msg string) *HTTPError {
+	return &HTTPError{
+		Status: http.StatusNotFound,
+		Msg:    msg,
+	}
+}

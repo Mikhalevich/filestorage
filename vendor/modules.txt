@@ -31,6 +31,13 @@ github.com/jinzhu/configor
 # github.com/sirupsen/logrus v1.10.2
 ## explicit; go 1.23
 github.com/sirupsen/logrus
+# github.com/stretchr/testify v1.12.1
+## explicit; go 1.17
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/assert/yaml
+github.com/stretchr/testify/internal/difflib
+github.com/stretchr/testify/internal/spew
+github.com/stretchr/testify/require
 # github.com/uptrace/opentelemetry-go-extra/otellogrus v0.4.0
 ## explicit; go 1.26.0
 github.com/uptrace/opentelemetry-go-extra/otellogrus
@@ -105,6 +112,9 @@ go.opentelemetry.io/proto/otlp/collector/trace/v1
 go.opentelemetry.io/proto/otlp/common/v1
 go.opentelemetry.io/proto/otlp/resource/v1
 go.opentelemetry.io/proto/otlp/trace/v1
+# go.yaml.in/yaml/v3 v3.0.5
+## explicit; go 1.16
+go.yaml.in/yaml/v3
 # golang.org/x/net v0.59.0
 ## explicit; go 1.26.0
 golang.org/x/net/http/httpguts

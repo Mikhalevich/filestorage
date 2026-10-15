@@ -5,13 +5,21 @@ import (
 	"net/http"
 
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 )
 
-type Handler struct {
+type FileService interface {
+	FileList(dirPath string) ([]file.File, error)
 }
 
-func New() *Handler {
-	return &Handler{}
+type Handler struct {
+	fileSvc FileService
+}
+
+func New(fileSvc FileService) *Handler {
+	return &Handler{
+		fileSvc: fileSvc,
+	}
 }
 
 func (h *Handler) Test(w http.ResponseWriter, r *http.Request) error {
