@@ -8,6 +8,7 @@ type Config struct {
 	LogLevel   string     `yaml:"log_level" required:"true"`
 	Tracing    Tracing    `yaml:"tracing" required:"true"`
 	HTTPServer HTTPServer `yaml:"http_server" required:"true"`
+	Storage    Storage    `yaml:"storage" required:"true"`
 }
 
 func (c *Config) Level() string {
@@ -31,4 +32,8 @@ type HTTPServer struct {
 	Port         int           `yaml:"port" required:"true"`
 	ReadTimeout  time.Duration `yaml:"read_timeout" required:"true"`
 	WriteTimeout time.Duration `yaml:"write_timeout" required:"true"`
+}
+
+type Storage struct {
+	RootDir string `yaml:"root_dir" required:"true"`
 }

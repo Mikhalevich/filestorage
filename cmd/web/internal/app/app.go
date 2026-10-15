@@ -21,13 +21,17 @@ const (
 	shutdownTimeout = time.Second * 60
 )
 
-func Start(ctx context.Context, cfg config.HTTPServer) error {
+func Start(
+	ctx context.Context,
+	cfg config.HTTPServer,
+	fileSvc handler.FileService,
+) error {
 	if err := startServer(
 		ctx,
 		cfg,
 		middleware.Tracing(tracing.StdTracer())(
 			middleware.Logging(logger.FromContext(ctx))(
-				createMux(handler.New()),
+				createMux(handler.New(fileSvc)),
 			),
 		),
 	); err != nil {
@@ -77,6 +81,7 @@ func createMux(h *handler.Handler) http.Handler {
 
 	registerHandler(mux, "/test", h.Test)
 	registerHandler(mux, "/error_test", h.ErrorTest)
+	registerHandler(mux, "GET /files/{"+handler.PathValueDirPath+"...}", h.FileList)
 
 	return mux
 }
