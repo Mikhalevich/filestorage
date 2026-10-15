@@ -1,13 +1,14 @@
 package filesvc_test
 
 import (
-	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
@@ -16,17 +17,13 @@ import (
 func writeFile(t *testing.T, name string, content string) {
 	t.Helper()
 
-	if err := os.WriteFile(name, []byte(content), 0o600); err != nil {
-		t.Fatalf("write file %q: %v", name, err)
-	}
+	require.NoError(t, os.WriteFile(name, []byte(content), 0o600))
 }
 
 func makeDir(t *testing.T, name string) {
 	t.Helper()
 
-	if err := os.Mkdir(name, 0o700); err != nil {
-		t.Fatalf("make dir %q: %v", name, err)
-	}
+	require.NoError(t, os.Mkdir(name, 0o700))
 }
 
 func setupRoot(t *testing.T) string {
@@ -43,29 +40,17 @@ func setupRoot(t *testing.T) string {
 	return rootDir
 }
 
-func assertFiles(t *testing.T, got []file.File, want map[string]int64) {
+func fileSizes(t *testing.T, files []file.File) map[string]int64 {
 	t.Helper()
 
-	if len(got) != len(want) {
-		t.Fatalf("expected %d files, got %d: %+v", len(want), len(got), got)
+	sizes := make(map[string]int64, len(files))
+	for _, f := range files {
+		assert.False(t, f.ModTime.IsZero(), "file %q: zero mod time", f.Name)
+
+		sizes[f.Name] = f.Size
 	}
 
-	for _, f := range got {
-		size, ok := want[f.Name]
-		if !ok {
-			t.Errorf("unexpected file %q", f.Name)
-
-			continue
-		}
-
-		if f.Size != size {
-			t.Errorf("file %q: expected size %d, got %d", f.Name, size, f.Size)
-		}
-
-		if f.ModTime.IsZero() {
-			t.Errorf("file %q: zero mod time", f.Name)
-		}
-	}
+	return sizes
 }
 
 func TestFileList(t *testing.T) {
@@ -92,11 +77,9 @@ func TestFileList(t *testing.T) {
 			t.Parallel()
 
 			files, err := svc.FileList(tc.path)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.NoError(t, err)
 
-			assertFiles(t, files, tc.want)
+			assert.Equal(t, tc.want, fileSizes(t, files))
 		})
 	}
 }
@@ -107,9 +90,7 @@ func TestFileListNotExist(t *testing.T) {
 	svc := filesvc.New(setupRoot(t))
 
 	_, err := svc.FileList("missing")
-	if !errors.Is(err, fs.ErrNotExist) {
-		t.Fatalf("expected fs.ErrNotExist, got %v", err)
-	}
+	require.ErrorIs(t, err, fs.ErrNotExist)
 }
 
 func TestFileListEscapeRoot(t *testing.T) {
@@ -118,9 +99,8 @@ func TestFileListEscapeRoot(t *testing.T) {
 	svc := filesvc.New(filepath.Join(setupRoot(t), "sub"))
 
 	for _, p := range []string{"..", "../", "/../", "../sub"} {
-		if _, err := svc.FileList(p); err == nil {
-			t.Errorf("path %q: expected error, got nil", p)
-		}
+		_, err := svc.FileList(p)
+		assert.Error(t, err, "path %q", p)
 	}
 }
 
@@ -140,24 +120,16 @@ func TestFileListSortedByModTime(t *testing.T) {
 		writeFile(t, fullName, name)
 
 		modTime := base.Add(offset)
-		if err := os.Chtimes(fullName, modTime, modTime); err != nil {
-			t.Fatalf("chtimes %q: %v", name, err)
-		}
+		require.NoError(t, os.Chtimes(fullName, modTime, modTime))
 	}
 
 	files, err := filesvc.New(rootDir).FileList("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	want := []string{"b.txt", "c.txt", "d.txt", "a.txt"}
+	require.NoError(t, err)
 
 	got := make([]string, 0, len(files))
 	for _, f := range files {
 		got = append(got, f.Name)
 	}
 
-	if !slices.Equal(got, want) {
-		t.Fatalf("expected order %v, got %v", want, got)
-	}
+	assert.Equal(t, []string{"b.txt", "c.txt", "d.txt", "a.txt"}, got)
 }
