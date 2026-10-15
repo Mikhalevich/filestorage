@@ -8,8 +8,10 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
 )
 
 // FileList returns regular files located in dirPath directory relative to the service root.
@@ -27,7 +29,7 @@ func (s *Service) FileList(dirPath string) ([]file.File, error) {
 
 	entries, err := fs.ReadDir(root.FS(), fsPath)
 	if err != nil {
-		return nil, fmt.Errorf("read dir %q: %w", fsPath, err)
+		return nil, fmt.Errorf("read dir %q: %w", fsPath, readDirError(err))
 	}
 
 	files := make([]file.File, 0, len(entries))
@@ -71,4 +73,18 @@ func toFSPath(dirPath string) string {
 	}
 
 	return cleaned
+}
+
+// readDirError attaches perror describing the failure to the original error.
+func readDirError(err error) error {
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("%w: %w", perror.NotFound("directory not found"), err)
+	case errors.Is(err, fs.ErrInvalid):
+		return fmt.Errorf("%w: %w", perror.InvalidArgument("invalid directory path"), err)
+	case errors.Is(err, syscall.ENOTDIR):
+		return fmt.Errorf("%w: %w", perror.InvalidArgument("not a directory"), err)
+	}
+
+	return err
 }

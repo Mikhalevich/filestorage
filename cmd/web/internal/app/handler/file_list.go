@@ -2,14 +2,12 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
-	"syscall"
 	"time"
 
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
 )
 
 const (
@@ -28,16 +26,7 @@ func (h *Handler) FileList(rspWriter http.ResponseWriter, r *http.Request) error
 
 	files, err := h.fileSvc.FileList(dirPath)
 	if err != nil {
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			return httperror.NotFound("directory not found")
-		case errors.Is(err, fs.ErrInvalid):
-			return httperror.BadRequest("invalid directory path")
-		case errors.Is(err, syscall.ENOTDIR):
-			return httperror.BadRequest("not a directory")
-		}
-
-		return fmt.Errorf("file list %q: %w", dirPath, err)
+		return fileListError(dirPath, err)
 	}
 
 	fileList := make([]fileListResponse, 0, len(files))
@@ -56,4 +45,18 @@ func (h *Handler) FileList(rspWriter http.ResponseWriter, r *http.Request) error
 	}
 
 	return nil
+}
+
+func fileListError(dirPath string, err error) error {
+	if perr, ok := perror.ParseError(err); ok {
+		//nolint:exhaustive
+		switch perr.Type {
+		case perror.TypeNotFound:
+			return httperror.NotFound(perr.Message)
+		case perror.TypeInvalidArgument:
+			return httperror.BadRequest(perr.Message)
+		}
+	}
+
+	return fmt.Errorf("file list %q: %w", dirPath, err)
 }

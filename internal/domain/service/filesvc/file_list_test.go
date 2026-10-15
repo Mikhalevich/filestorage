@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
 	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
 )
 
@@ -91,6 +92,17 @@ func TestFileListNotExist(t *testing.T) {
 
 	_, err := svc.FileList("missing")
 	require.ErrorIs(t, err, fs.ErrNotExist)
+	assert.True(t, perror.IsType(err, perror.TypeNotFound))
+}
+
+func TestFileListNotDir(t *testing.T) {
+	t.Parallel()
+
+	svc := filesvc.New(setupRoot(t))
+
+	_, err := svc.FileList("a.txt")
+	require.Error(t, err)
+	assert.True(t, perror.IsType(err, perror.TypeInvalidArgument))
 }
 
 func TestFileListEscapeRoot(t *testing.T) {
@@ -100,7 +112,7 @@ func TestFileListEscapeRoot(t *testing.T) {
 
 	for _, p := range []string{"..", "../", "/../", "../sub"} {
 		_, err := svc.FileList(p)
-		assert.Error(t, err, "path %q", p)
+		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 }
 

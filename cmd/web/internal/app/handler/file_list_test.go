@@ -3,10 +3,8 @@ package handler_test
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"net/http/httptest"
-	"syscall"
 	"testing"
 	"time"
 
@@ -16,6 +14,7 @@ import (
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler"
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
 )
 
 type fakeFileService struct {
@@ -80,10 +79,20 @@ func TestFileListErrors(t *testing.T) {
 		name       string
 		svcErr     error
 		wantStatus int
+		wantMsg    string
 	}{
-		{name: "not exist", svcErr: fmt.Errorf("read dir: %w", fs.ErrNotExist), wantStatus: http.StatusNotFound},
-		{name: "invalid path", svcErr: fmt.Errorf("read dir: %w", fs.ErrInvalid), wantStatus: http.StatusBadRequest},
-		{name: "not dir", svcErr: fmt.Errorf("read dir: %w", syscall.ENOTDIR), wantStatus: http.StatusBadRequest},
+		{
+			name:       "not found",
+			svcErr:     fmt.Errorf("read dir: %w", perror.NotFound("directory not found")),
+			wantStatus: http.StatusNotFound,
+			wantMsg:    "directory not found",
+		},
+		{
+			name:       "invalid argument",
+			svcErr:     fmt.Errorf("read dir: %w", perror.InvalidArgument("not a directory")),
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "not a directory",
+		},
 	}
 
 	for _, tc := range tests {
@@ -95,6 +104,7 @@ func TestFileListErrors(t *testing.T) {
 			var httpErr *httperror.HTTPError
 			require.ErrorAs(t, err, &httpErr)
 			assert.Equal(t, tc.wantStatus, httpErr.Status)
+			assert.Equal(t, tc.wantMsg, httpErr.Msg)
 		})
 	}
 }
@@ -102,11 +112,23 @@ func TestFileListErrors(t *testing.T) {
 func TestFileListInternalError(t *testing.T) {
 	t.Parallel()
 
-	svcErr := errors.New("boom")
+	tests := []struct {
+		name   string
+		svcErr error
+	}{
+		{name: "plain error", svcErr: errors.New("boom")},
+		{name: "unspecified perror", svcErr: perror.New(perror.TypeUnspecified, "boom")},
+	}
 
-	_, err := callFileList(t, &fakeFileService{err: svcErr}, "dir")
-	require.ErrorIs(t, err, svcErr)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	var httpErr *httperror.HTTPError
-	assert.NotErrorAs(t, err, &httpErr)
+			_, err := callFileList(t, &fakeFileService{err: tc.svcErr}, "dir")
+			require.ErrorIs(t, err, tc.svcErr)
+
+			var httpErr *httperror.HTTPError
+			assert.NotErrorAs(t, err, &httpErr)
+		})
+	}
 }
