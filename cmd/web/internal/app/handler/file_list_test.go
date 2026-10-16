@@ -3,8 +3,10 @@ package handler_test
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,14 +21,38 @@ import (
 
 type fakeFileService struct {
 	files   []file.File
+	info    file.File
+	content *trackedReader
 	err     error
 	gotPath string
+}
+
+type trackedReader struct {
+	*strings.Reader
+
+	closed bool
+}
+
+func (r *trackedReader) Close() error {
+	r.closed = true
+
+	return nil
 }
 
 func (f *fakeFileService) FileList(dirPath string) ([]file.File, error) {
 	f.gotPath = dirPath
 
 	return f.files, f.err
+}
+
+func (f *fakeFileService) OpenFile(filePath string) (file.File, io.ReadSeekCloser, error) {
+	f.gotPath = filePath
+
+	if f.err != nil {
+		return file.File{}, nil, f.err
+	}
+
+	return f.info, f.content, nil
 }
 
 func callFileList(t *testing.T, svc *fakeFileService, dirPath string) (*httptest.ResponseRecorder, error) {
