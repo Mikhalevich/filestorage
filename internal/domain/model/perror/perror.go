@@ -45,3 +45,7 @@ func NotFound(msg string) Error {
 func InvalidArgument(msg string) Error {
 	return New(TypeInvalidArgument, msg)
 }
+
+func AlreadyExists(msg string) Error {
+	return New(TypeAlreadyExists, msg)
+}

@@ -34,3 +34,10 @@ func NotFound(msg string) *HTTPError {
 		Msg:    msg,
 	}
 }
+
+func Conflict(msg string) *HTTPError {
+	return &HTTPError{
+		Status: http.StatusConflict,
+		Msg:    msg,
+	}
+}

@@ -146,6 +146,12 @@ func TestFileListErrors(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    "not a directory",
 		},
+		{
+			name:       "already exists",
+			svcErr:     fmt.Errorf("write file: %w", perror.AlreadyExists("file already exists")),
+			wantStatus: http.StatusConflict,
+			wantMsg:    "file already exists",
+		},
 	}
 
 	for _, tc := range tests {
