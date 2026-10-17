@@ -18,41 +18,42 @@ import (
 // Subdirectories and non-regular files are skipped.
 // Files are sorted by modification time (oldest first), ties are sorted by name.
 func (s *Service) FileList(dirPath string) ([]file.File, error) {
-	root, err := os.OpenRoot(s.rootDir)
-	if err != nil {
-		return nil, fmt.Errorf("open root: %w", err)
-	}
-
-	defer root.Close()
-
-	fsPath := toFSPath(dirPath)
-
-	entries, err := fs.ReadDir(root.FS(), fsPath)
-	if err != nil {
-		return nil, fmt.Errorf("read dir %q: %w", fsPath, readDirError(err))
-	}
-
-	files := make([]file.File, 0, len(entries))
-
-	for _, entry := range entries {
-		if !entry.Type().IsRegular() {
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				continue
+	files, err := s.withRoot(
+		dirPath,
+		func(root *os.Root, fsPath string) ([]file.File, error) {
+			entries, err := fs.ReadDir(root.FS(), fsPath)
+			if err != nil {
+				return nil, fmt.Errorf("read dir %q: %w", fsPath, readDirError(err))
 			}
 
-			return nil, fmt.Errorf("file info %q: %w", entry.Name(), err)
-		}
+			files := make([]file.File, 0, len(entries))
 
-		files = append(files, file.File{
-			Name:    entry.Name(),
-			Size:    info.Size(),
-			ModTime: info.ModTime(),
-		})
+			for _, entry := range entries {
+				if !entry.Type().IsRegular() {
+					continue
+				}
+
+				info, err := entry.Info()
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						continue
+					}
+
+					return nil, fmt.Errorf("file info %q: %w", entry.Name(), err)
+				}
+
+				files = append(files, file.File{
+					Name:    entry.Name(),
+					Size:    info.Size(),
+					ModTime: info.ModTime(),
+				})
+			}
+
+			return files, nil
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	slices.SortFunc(files, func(lhs, rhs file.File) int {

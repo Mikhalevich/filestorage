@@ -39,7 +39,7 @@ func (s *Service) SaveFile(
 				return nil, fmt.Errorf("validate file name %q: %w", fileName, perror.InvalidArgument("invalid file name"))
 			}
 
-			filePath, err := createUniqueFile(
+			filePath, err := writeUniqueFile(
 				root,
 				dir,
 				fileName,
@@ -52,7 +52,7 @@ func (s *Service) SaveFile(
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("create file: %w", err)
+				return nil, err
 			}
 
 			info, err := root.Stat(filePath)
@@ -64,7 +64,7 @@ func (s *Service) SaveFile(
 		},
 	)
 	if err != nil {
-		return file.File{}, fmt.Errorf("with root: %w", err)
+		return file.File{}, err
 	}
 
 	return file.File{
@@ -79,20 +79,22 @@ func isValidFileName(name string) bool {
 	return name != "." && !strings.Contains(name, "/") && fs.ValidPath(name)
 }
 
-// createUniqueFile creates a new file in dir, adding a numeric suffix to fileName until a free name is found.
+// writeUniqueFile creates a new file in dir and fills it with writeFn,
+// adding a numeric suffix to fileName until a free name is found.
 // O_EXCL guarantees that an existing file is never overwritten, even by concurrent uploads.
-func createUniqueFile(
+// Returns path of the written file relative to root.
+func writeUniqueFile(
 	root *os.Root,
 	dir string,
 	fileName string,
-	fileProcessorFn func(osFile *os.File) error,
+	writeFn func(osFile *os.File) error,
 ) (string, error) {
 	for attempt := range maxRenameAttempts {
 		filePath := path.Join(dir, candidateName(fileName, attempt))
 
-		if err := openAndProcessFile(root, filePath, fileProcessorFn); err != nil {
+		if err := createAndWriteFile(root, filePath, writeFn); err != nil {
 			if !perror.IsType(err, perror.TypeAlreadyExists) {
-				return "", fmt.Errorf("open and process file %q: %w", filePath, err)
+				return "", fmt.Errorf("write file %q: %w", filePath, err)
 			}
 
 			continue
@@ -104,36 +106,33 @@ func createUniqueFile(
 	return "", fmt.Errorf("no free name for %q after %d attempts", fileName, maxRenameAttempts)
 }
 
-func openAndProcessFile(
+// createAndWriteFile creates filePath (failing if it exists), fills it with writeFn and closes it.
+// On write or close failure the partial file is removed.
+func createAndWriteFile(
 	root *os.Root,
 	filePath string,
-	fileProcessorFn func(osFile *os.File) error,
+	writeFn func(osFile *os.File) error,
 ) error {
 	osFile, err := root.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, filePerm)
 	if err != nil {
 		return fmt.Errorf("open file: %w", createFileError(err))
 	}
 
-	if err := func() error {
-		var errs error
-		if processErr := fileProcessorFn(osFile); processErr != nil {
-			errs = errors.Join(errs, fmt.Errorf("file processor fn: %w", processErr))
-		}
+	writeErr := writeFn(osFile)
 
-		if closeErr := osFile.Close(); closeErr != nil {
-			errs = errors.Join(errs, fmt.Errorf("close file: %w", closeErr))
-		}
-
-		return errs
-	}(); err != nil {
-		if removeErr := root.Remove(filePath); removeErr != nil {
-			return errors.Join(err, fmt.Errorf("remove partial file: %w", removeErr))
-		}
-
-		return err
+	if closeErr := osFile.Close(); closeErr != nil {
+		writeErr = errors.Join(writeErr, fmt.Errorf("close file: %w", closeErr))
 	}
 
-	return nil
+	if writeErr == nil {
+		return nil
+	}
+
+	if removeErr := root.Remove(filePath); removeErr != nil {
+		return errors.Join(writeErr, fmt.Errorf("remove partial file: %w", removeErr))
+	}
+
+	return writeErr
 }
 
 // candidateName returns name for the given attempt: a.txt, a_1.txt, a_2.txt...

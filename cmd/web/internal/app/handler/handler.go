@@ -34,6 +34,8 @@ func serviceError(operation string, path string, err error) error {
 			return httperror.NotFound(perr.Message)
 		case perror.TypeInvalidArgument:
 			return httperror.BadRequest(perr.Message)
+		case perror.TypeAlreadyExists:
+			return httperror.Conflict(perr.Message)
 		}
 	}
 
