@@ -79,9 +79,9 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 func createMux(hdl *handler.Handler) http.Handler {
 	mux := http.NewServeMux()
 
-	registerHandler(mux, "/test", hdl.Test)
-	registerHandler(mux, "/error_test", hdl.ErrorTest)
 	registerHandler(mux, "GET /files/{"+handler.PathValueDirPath+"...}", hdl.FileList)
+	registerHandler(mux, "POST /files/{"+handler.PathValueDirPath+"...}", hdl.FileUpload)
+
 	registerHandler(mux, "GET /download/{"+handler.PathValueFilePath+"...}", hdl.FileDownload)
 
 	return mux

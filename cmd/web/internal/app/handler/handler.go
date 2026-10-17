@@ -3,7 +3,6 @@ package handler
 import (
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
@@ -13,6 +12,7 @@ import (
 type FileService interface {
 	FileList(dirPath string) ([]file.File, error)
 	OpenFile(filePath string) (file.File, io.ReadSeekCloser, error)
+	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
 }
 
 type Handler struct {
@@ -23,16 +23,6 @@ func New(fileSvc FileService) *Handler {
 	return &Handler{
 		fileSvc: fileSvc,
 	}
-}
-
-func (h *Handler) Test(w http.ResponseWriter, r *http.Request) error {
-	fmt.Fprintln(w, "It works!!!")
-
-	return nil
-}
-
-func (h *Handler) ErrorTest(w http.ResponseWriter, r *http.Request) error {
-	return httperror.InternalServerError("test error")
 }
 
 // serviceError converts known domain errors into http errors, other errors are wrapped with operation and path.

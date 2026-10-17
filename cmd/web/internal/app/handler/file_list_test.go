@@ -25,6 +25,12 @@ type fakeFileService struct {
 	content *trackedReader
 	err     error
 	gotPath string
+	saved   []savedFile
+}
+
+type savedFile struct {
+	name    string
+	content string
 }
 
 type trackedReader struct {
@@ -53,6 +59,27 @@ func (f *fakeFileService) OpenFile(filePath string) (file.File, io.ReadSeekClose
 	}
 
 	return f.info, f.content, nil
+}
+
+func (f *fakeFileService) SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error) {
+	f.gotPath = dirPath
+
+	if f.err != nil {
+		return file.File{}, f.err
+	}
+
+	data, err := io.ReadAll(content)
+	if err != nil {
+		return file.File{}, fmt.Errorf("read content: %w", err)
+	}
+
+	f.saved = append(f.saved, savedFile{name: fileName, content: string(data)})
+
+	return file.File{
+		Name:    "stored_" + fileName,
+		Size:    int64(len(data)),
+		ModTime: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+	}, nil
 }
 
 func callFileList(t *testing.T, svc *fakeFileService, dirPath string) (*httptest.ResponseRecorder, error) {
