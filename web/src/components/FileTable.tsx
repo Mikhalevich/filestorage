@@ -1,0 +1,46 @@
+import { downloadURL, type StoredFile } from '../api/client'
+import { formatSize, formatTime } from '../format'
+
+type Props = {
+  dir: string
+  files: StoredFile[]
+  highlighted: ReadonlySet<string>
+}
+
+// FileTable keeps the server order: oldest first, ties by name.
+export function FileTable({ dir, files, highlighted }: Props) {
+  if (files.length === 0) {
+    return <p className="empty">No files in this directory yet.</p>
+  }
+
+  return (
+    <div className="table-wrap">
+      <table className="files">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col" className="num">
+              Size
+            </th>
+            <th scope="col">Modified</th>
+          </tr>
+        </thead>
+        <tbody>
+          {files.map((f) => (
+            <tr key={f.name} className={highlighted.has(f.name) ? 'row-new' : undefined}>
+              <td className="name">
+                <a href={downloadURL(dir, f.name)} download={f.name} title={`Download ${f.name}`}>
+                  {f.name}
+                </a>
+              </td>
+              <td className="num">{formatSize(f.size)}</td>
+              <td className="time">
+                <time dateTime={f.mod_time}>{formatTime(f.mod_time)}</time>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

@@ -13,6 +13,7 @@ LINTER_VERSION := v2.14.0
 
 .PHONY: all build run-web test bench vendor \
 install-linter lint fmt tools-update \
+web-install web-gen web-dev web-build web-lint \
 
 all: build
 
@@ -47,3 +48,18 @@ fmt: install-linter
 
 tools-update:
 	go get tool
+
+web-install:
+	cd web && npm ci
+
+web-gen:
+	cd web && npm run gen
+
+web-dev:
+	cd web && npm run dev
+
+web-build:
+	cd web && npm run build
+
+web-lint:
+	cd web && npm run lint
