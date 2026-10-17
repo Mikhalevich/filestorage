@@ -17,7 +17,7 @@ func New(rootDir string) *Service {
 }
 
 // withRoot opens the service root and calls rootFn with it and relativePath converted to fs path.
-// The root is closed when rootFn returns, so nothing opened from it may outlive the call.
+// The root is closed when rootFn returns; files opened through it stay valid.
 func (s *Service) withRoot[T any](
 	relativePath string,
 	rootFn func(root *os.Root, fsPath string) (T, error),
