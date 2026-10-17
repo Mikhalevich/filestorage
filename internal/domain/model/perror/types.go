@@ -6,4 +6,5 @@ const (
 	TypeUnspecified Type = iota
 	TypeNotFound
 	TypeInvalidArgument
+	TypeAlreadyExists
 )
