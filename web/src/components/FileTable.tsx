@@ -5,10 +5,12 @@ type Props = {
   dir: string
   files: StoredFile[]
   highlighted: ReadonlySet<string>
+  deleting: ReadonlySet<string>
+  onDelete: (name: string) => void
 }
 
 // FileTable keeps the server order: oldest first, ties by name.
-export function FileTable({ dir, files, highlighted }: Props) {
+export function FileTable({ dir, files, highlighted, deleting, onDelete }: Props) {
   if (files.length === 0) {
     return <p className="empty">No files in this directory yet.</p>
   }
@@ -23,6 +25,9 @@ export function FileTable({ dir, files, highlighted }: Props) {
               Size
             </th>
             <th scope="col">Modified</th>
+            <th scope="col">
+              <span className="visually-hidden">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -36,6 +41,17 @@ export function FileTable({ dir, files, highlighted }: Props) {
               <td className="num">{formatSize(f.size)}</td>
               <td className="time">
                 <time dateTime={f.mod_time}>{formatTime(f.mod_time)}</time>
+              </td>
+              <td className="actions">
+                <button
+                  type="button"
+                  className="button button-danger"
+                  disabled={deleting.has(f.name)}
+                  aria-label={`Delete ${f.name}`}
+                  onClick={() => onDelete(f.name)}
+                >
+                  {deleting.has(f.name) ? 'Deleting…' : 'Delete'}
+                </button>
               </td>
             </tr>
           ))}
