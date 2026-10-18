@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make vendor`: runs `go mod tidy` and then `go mod vendor`. Dependencies are vendored and committed, so run this after any change to `go.mod`.
 - Frontend (`web/`, needs Node): `make web-install` (`npm ci`), `make web-dev` (Vite dev server, proxies `/files/` and `/download/` to `localhost:8080`; override the target with `API_TARGET`), `make web-build`, `make web-lint` (oxlint), `make web-gen`.
 
-`compose-up`/`compose-down` point to `script/docker/docker-compose.yml`, which doesn't exist yet.
+- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/` and `/download/` to the backend. The API is also exposed on `:8080`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml` and keeps files in the `storage` named volume. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
 
 ## Linting conventions
 

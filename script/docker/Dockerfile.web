@@ -1,0 +1,20 @@
+FROM golang:1.27-alpine3.24 AS build
+
+WORKDIR /app
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build -mod=vendor -buildvcs=false -o /out/web ./cmd/web
+
+FROM alpine:3.24
+
+RUN addgroup -S app && adduser -S -G app app && \
+    mkdir -p /data/storage && chown app:app /data/storage
+
+COPY --from=build /out/web /web
+
+USER app
+
+EXPOSE 8080
+
+ENTRYPOINT ["/web", "-config=/etc/filestorage/config-web.yaml"]

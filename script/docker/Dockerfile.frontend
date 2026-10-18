@@ -1,0 +1,16 @@
+FROM node:26-alpine AS build
+
+WORKDIR /src/web
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+# gen-api.mjs reads ../../api/openapi.yaml relative to web/scripts.
+COPY api/ /src/api/
+COPY web/ ./
+RUN npm run build
+
+FROM nginx:1.29-alpine
+
+COPY script/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /src/web/dist /usr/share/nginx/html

@@ -1,2 +1,6 @@
-.gitweb/node_modules
+.git
+web/node_modules
 web/dist
+bin
+tools
+config/config-web.yaml
