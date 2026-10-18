@@ -14,6 +14,19 @@ services:
       - jaeger
     restart: unless-stopped
 
+  mcp:
+    build:
+      context: ../..
+      dockerfile: script/docker/Dockerfile.mcp
+    volumes:
+      - ./config-mcp.yaml:/etc/filestorage/config-mcp.yaml:ro
+      - storage:/data/storage
+    ports:
+      - "8081:8081"
+    depends_on:
+      - jaeger
+    restart: unless-stopped
+
   frontend:
     build:
       context: ../..

@@ -11,6 +11,7 @@ A small file storage service written in Go, with a browser UI. It serves a direc
 - Structured logging (logrus) and OpenTelemetry tracing over OTLP/HTTP.
 - Graceful shutdown on `SIGINT`/`SIGTERM`.
 - A React web UI (`web/`) to browse directories, upload files (drag & drop or file picker) and download them.
+- An [MCP](https://modelcontextprotocol.io) server (`cmd/mcp`) that lets LLM clients list, read, write and delete files.
 
 There is no authentication yet.
 
@@ -40,7 +41,7 @@ The Vite dev server proxies `/files/` and `/download/` to `http://localhost:8080
 ### Docker
 
 ```sh
-make compose-up           # UI on http://localhost:3000, API on :8080, Jaeger UI on :16686
+make compose-up           # UI on http://localhost:3000, API on :8080, MCP on :8081, Jaeger UI on :16686
 make compose-down
 ```
 
@@ -62,6 +63,26 @@ http_server:
 storage:
   root_dir: "./storage"     # directory served by the API
 ```
+
+## MCP server
+
+`cmd/mcp` serves the same storage over the Model Context Protocol, using the streamable HTTP transport at `/mcp`:
+
+```sh
+cp config/config-mcp-example.yaml config/config-mcp.yaml
+make build
+make run-mcp              # MCP on http://localhost:8081/mcp
+claude mcp add --transport http filestorage http://localhost:8081/mcp
+```
+
+| Tool          | Description                                                                 |
+|---------------|-----------------------------------------------------------------------------|
+| `list_files`  | List files in a directory                                                   |
+| `read_file`   | Read a file: UTF-8 content as text, anything else as a base64 resource (size capped by `limits.max_read_bytes`) |
+| `write_file`  | Save a new file (text or base64). Taken names get a numeric suffix          |
+| `delete_file` | Delete a file                                                               |
+
+Its config matches the web one except that `http_server` has no `write_timeout` and there is an extra `limits.max_read_bytes` field.
 
 ## API
 
@@ -85,7 +106,7 @@ curl -OJ http://localhost:8080/download/a.txt
 
 | Command            | Description                                               |
 |--------------------|-----------------------------------------------------------|
-| `make build`       | Build `./cmd/web` into `bin/web`                          |
+| `make build`       | Build `./cmd/web` and `./cmd/mcp` into `bin/`             |
 | `make test`        | Run Go tests                                              |
 | `make bench`       | Run benchmarks                                            |
 | `make lint`        | Run golangci-lint (installed into `tools/bin` on first use) |
@@ -104,6 +125,7 @@ Run `make web-gen` after changing `api/openapi.yaml`. CI fails if the generated 
 ```
 api/              OpenAPI specification
 cmd/web/          HTTP server binary (config, setup, handlers)
+cmd/mcp/          MCP server binary (config, setup, tools)
 config/           Example configuration
 internal/domain/  File storage service
 internal/infra/   Application bootstrap, logging, tracing

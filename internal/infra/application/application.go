@@ -51,7 +51,7 @@ func run(
 
 	serviceLogger := log.WithField("service_name", cfg.ServiceName())
 
-	shutdownTracer, err := tracing.SetupTracer(cfg.TracingEndpoint(), cfg.ServiceName(), buildVersion())
+	shutdownTracer, err := tracing.SetupTracer(cfg.TracingEndpoint(), cfg.ServiceName(), BuildVersion())
 	if err != nil {
 		serviceLogger.WithError(err).Error("failed to setup tracer")
 
@@ -85,8 +85,8 @@ func run(
 	return 0
 }
 
-// buildVersion returns the VCS revision stamped by the go toolchain, or empty string if unavailable.
-func buildVersion() string {
+// BuildVersion returns the VCS revision stamped by the go toolchain, or empty string if unavailable.
+func BuildVersion() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return ""

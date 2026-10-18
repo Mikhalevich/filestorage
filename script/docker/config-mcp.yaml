@@ -1,0 +1,11 @@
+log_level: "info"
+tracing:
+  endpoint: "jaeger:4318"
+  service_name: "mcp"
+http_server:
+  port: 8081
+  read_timeout: 10s
+storage:
+  root_dir: "/data/storage"
+limits:
+  max_read_bytes: 1048576

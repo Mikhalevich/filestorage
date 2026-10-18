@@ -11,7 +11,7 @@ GOPRIVATE = GOPRIVATE=github.com/Mikhalevich/
 LINTER_NAME := golangci-lint
 LINTER_VERSION := v2.14.0
 
-.PHONY: all build run-web test bench vendor \
+.PHONY: all build run-web run-mcp test bench vendor \
 install-linter lint fmt tools-update \
 web-install web-gen web-dev web-build web-lint \
 compose-up compose-down
@@ -20,9 +20,13 @@ all: build
 
 build:
 	$(GOPRIVATE) go build -mod=vendor -o $(BIN_PATH)/web ./cmd/web
+	$(GOPRIVATE) go build -mod=vendor -o $(BIN_PATH)/mcp ./cmd/mcp
 
 run-web:
 	./bin/web -config=./config/config-web.yaml
+
+run-mcp:
+	./bin/mcp -config=./config/config-mcp.yaml
 
 compose-up:
 	docker compose -f script/docker/docker-compose.yml up --build
