@@ -82,6 +82,12 @@ func (f *fakeFileService) SaveFile(dirPath string, fileName string, content io.R
 	}, nil
 }
 
+func (f *fakeFileService) DeleteFile(filePath string) error {
+	f.gotPath = filePath
+
+	return f.err
+}
+
 func callFileList(t *testing.T, svc *fakeFileService, dirPath string) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 

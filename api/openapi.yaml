@@ -103,6 +103,31 @@ paths:
               example: "directory not found\n"
         "500":
           $ref: "#/components/responses/InternalServerError"
+    delete:
+      operationId: deleteFile
+      summary: Delete a file
+      description: Removes the regular file. Directories and other non-regular files are never removed.
+      tags: [files]
+      responses:
+        "204":
+          description: File was deleted.
+        "400":
+          description: |
+            Invalid file path. Possible messages: `invalid file path`, `not a regular file`.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "not a regular file\n"
+        "404":
+          description: "File does not exist. Message: `file not found`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "file not found\n"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /download/{path}:
     parameters:

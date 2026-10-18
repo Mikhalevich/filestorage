@@ -13,6 +13,7 @@ type FileService interface {
 	FileList(dirPath string) ([]file.File, error)
 	OpenFile(filePath string) (file.File, io.ReadSeekCloser, error)
 	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
+	DeleteFile(filePath string) error
 }
 
 type Handler struct {
