@@ -1,0 +1,20 @@
+FROM golang:1.27-alpine3.24 AS build
+
+WORKDIR /app
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build -mod=vendor -buildvcs=false -o /out/mcp ./cmd/mcp
+
+FROM alpine:3.24
+
+RUN addgroup -S app && adduser -S -G app app && \
+    mkdir -p /data/storage && chown app:app /data/storage
+
+COPY --from=build /out/mcp /mcp
+
+USER app
+
+EXPOSE 8081
+
+ENTRYPOINT ["/mcp", "-config=/etc/filestorage/config-mcp.yaml"]
