@@ -56,7 +56,11 @@ export interface paths {
          *     before the extension (`a.txt` -> `a_1.txt`), so stored names may differ from the requested ones.
          */
         post: operations["uploadFiles"];
-        delete?: never;
+        /**
+         * Delete a file
+         * @description Removes the regular file. Directories and other non-regular files are never removed.
+         */
+        delete: operations["deleteFile"];
         options?: never;
         head?: never;
         patch?: never;
@@ -314,6 +318,52 @@ export interface operations {
                 };
                 content: {
                     /** @example directory not found */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    deleteFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Path relative to the storage root. May contain `/` separated segments (`sub/dir`).
+                 *     Paths escaping the root (`..`) are rejected with 400.
+                 * @example sub/dir
+                 */
+                path: components["parameters"]["Path"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description File was deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid file path. Possible messages: `invalid file path`, `not a regular file`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example not a regular file */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            /** @description File does not exist. Message: `file not found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example file not found */
                     "text/plain": components["schemas"]["Error"];
                 };
             };
