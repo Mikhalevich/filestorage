@@ -14,6 +14,7 @@ LINTER_VERSION := v2.14.0
 .PHONY: all build run-web test bench vendor \
 install-linter lint fmt tools-update \
 web-install web-gen web-dev web-build web-lint \
+compose-up compose-down
 
 all: build
 
@@ -22,6 +23,12 @@ build:
 
 run-web:
 	./bin/web -config=./config/config-web.yaml
+
+compose-up:
+	docker compose -f script/docker/docker-compose.yml up --build
+
+compose-down:
+	docker compose -f script/docker/docker-compose.yml down
 
 test:
 	go test ./...

@@ -37,6 +37,15 @@ make web-dev              # UI on http://localhost:5173
 
 The Vite dev server proxies `/files/` and `/download/` to `http://localhost:8080`. To use another backend, set `API_TARGET=http://host:port make web-dev`.
 
+### Docker
+
+```sh
+make compose-up           # UI on http://localhost:3000, API on :8080, Jaeger UI on :16686
+make compose-down
+```
+
+The stack is defined in `script/docker/docker-compose.yml`. The server reads `script/docker/config-web.yaml`, and uploaded files are kept in the `storage` volume.
+
 ## Configuration
 
 The server reads a YAML file passed with the required `-config` flag. All fields are required:
