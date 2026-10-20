@@ -7,8 +7,7 @@ type Props = {
   onNavigate: (dir: string) => void
 }
 
-// PathBar shows breadcrumbs of the current directory and lets the user jump to any path:
-// the API lists only files, so subdirectories can't be discovered by browsing.
+// PathBar shows breadcrumbs of the current directory and lets the user jump to any path.
 export function PathBar({ dir, onNavigate }: Props) {
   const [draft, setDraft] = useState(dir)
   const [prevDir, setPrevDir] = useState(dir)

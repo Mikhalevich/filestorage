@@ -5,19 +5,41 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 )
 
 const (
 	PathValueDirPath = "path"
 )
 
+const (
+	entryTypeFile      = "file"
+	entryTypeDirectory = "directory"
+)
+
 type fileListResponse struct {
 	Name    string    `json:"name"`
+	Type    string    `json:"type"`
 	Size    int64     `json:"size"`
 	ModTime time.Time `json:"mod_time"`
 }
 
-// FileList writes JSON list of files located in the directory taken from the request path value.
+func toFileListResponse(entry file.File) fileListResponse {
+	entryType := entryTypeFile
+	if entry.IsDir {
+		entryType = entryTypeDirectory
+	}
+
+	return fileListResponse{
+		Name:    entry.Name,
+		Type:    entryType,
+		Size:    entry.Size,
+		ModTime: entry.ModTime,
+	}
+}
+
+// FileList writes JSON list of files and subdirectories located in the directory taken from the request path value.
 func (h *Handler) FileList(rspWriter http.ResponseWriter, r *http.Request) error {
 	dirPath := r.PathValue(PathValueDirPath)
 
@@ -28,11 +50,7 @@ func (h *Handler) FileList(rspWriter http.ResponseWriter, r *http.Request) error
 
 	fileList := make([]fileListResponse, 0, len(files))
 	for _, f := range files {
-		fileList = append(fileList, fileListResponse{
-			Name:    f.Name,
-			Size:    f.Size,
-			ModTime: f.ModTime,
-		})
+		fileList = append(fileList, toFileListResponse(f))
 	}
 
 	rspWriter.Header().Set("Content-Type", "application/json")

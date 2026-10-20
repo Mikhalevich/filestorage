@@ -38,8 +38,8 @@ func New(fileSvc FileService, maxReadBytes int64) *Tool {
 func (t *Tool) Register(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_files",
-		Description: "List regular files in a directory of the file storage, sorted by modification time (oldest first). " +
-			"Subdirectories are not listed.",
+		Description: "List regular files and subdirectories in a directory of the file storage. " +
+			"Subdirectories come first sorted by name, then files sorted by modification time (oldest first).",
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
 			OpenWorldHint: new(false),
@@ -88,17 +88,29 @@ func (t *Tool) Register(server *mcp.Server) {
 	}, handle(t.CreateDirectory))
 }
 
+const (
+	entryTypeFile      = "file"
+	entryTypeDirectory = "directory"
+)
+
 type FileInfo struct {
 	Name    string    `json:"name"`
-	Size    int64     `json:"size"     jsonschema:"file size in bytes"`
+	Type    string    `json:"type"     jsonschema:"entry type: file or directory"`
+	Size    int64     `json:"size"     jsonschema:"file size in bytes, 0 for directories"`
 	ModTime time.Time `json:"mod_time" jsonschema:"last modification time"`
 }
 
-func toFileInfo(f file.File) FileInfo {
+func toFileInfo(entry file.File) FileInfo {
+	entryType := entryTypeFile
+	if entry.IsDir {
+		entryType = entryTypeDirectory
+	}
+
 	return FileInfo{
-		Name:    f.Name,
-		Size:    f.Size,
-		ModTime: f.ModTime,
+		Name:    entry.Name,
+		Type:    entryType,
+		Size:    entry.Size,
+		ModTime: entry.ModTime,
 	}
 }
 

@@ -112,6 +112,7 @@ func TestFileListSuccess(t *testing.T) {
 	modTime := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	svc := &fakeFileService{
 		files: []file.File{
+			{Name: "sub", ModTime: modTime, IsDir: true},
 			{Name: "a.txt", Size: 3, ModTime: modTime},
 			{Name: "b.txt", Size: 5, ModTime: modTime.Add(time.Hour)},
 		},
@@ -123,8 +124,9 @@ func TestFileListSuccess(t *testing.T) {
 	assert.Equal(t, "sub/dir", svc.gotPath)
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.JSONEq(t, `[
-		{"name":"a.txt","size":3,"mod_time":"2026-01-01T00:00:00Z"},
-		{"name":"b.txt","size":5,"mod_time":"2026-01-01T01:00:00Z"}
+		{"name":"sub","type":"directory","size":0,"mod_time":"2026-01-01T00:00:00Z"},
+		{"name":"a.txt","type":"file","size":3,"mod_time":"2026-01-01T00:00:00Z"},
+		{"name":"b.txt","type":"file","size":5,"mod_time":"2026-01-01T01:00:00Z"}
 	]`, rec.Body.String())
 }
 

@@ -83,6 +83,25 @@ func resultText(t *testing.T, res *mcp.CallToolResult) string {
 func listedNames(t *testing.T, res *mcp.CallToolResult) []string {
 	t.Helper()
 
+	types := listedTypes(t, res)
+
+	names := make([]string, 0, len(types))
+	for _, entry := range types {
+		names = append(names, entry.name)
+	}
+
+	return names
+}
+
+type listedEntry struct {
+	name      string
+	entryType string
+}
+
+// listedTypes returns names and types of list_files entries in the result order.
+func listedTypes(t *testing.T, res *mcp.CallToolResult) []listedEntry {
+	t.Helper()
+
 	require.False(t, res.IsError, "tool error: %v", res.Content)
 
 	structured, ok := res.StructuredContent.(map[string]any)
@@ -91,7 +110,7 @@ func listedNames(t *testing.T, res *mcp.CallToolResult) []string {
 	files, ok := structured["files"].([]any)
 	require.True(t, ok, "files type %T", structured["files"])
 
-	names := make([]string, 0, len(files))
+	entries := make([]listedEntry, 0, len(files))
 
 	for _, f := range files {
 		fileInfo, ok := f.(map[string]any)
@@ -100,10 +119,13 @@ func listedNames(t *testing.T, res *mcp.CallToolResult) []string {
 		name, ok := fileInfo["name"].(string)
 		require.True(t, ok)
 
-		names = append(names, name)
+		entryType, ok := fileInfo["type"].(string)
+		require.True(t, ok)
+
+		entries = append(entries, listedEntry{name: name, entryType: entryType})
 	}
 
-	return names
+	return entries
 }
 
 func TestListTools(t *testing.T) {
@@ -130,8 +152,8 @@ func TestListFiles(t *testing.T) {
 		args map[string]any
 		want []string
 	}{
-		{name: "root no path", args: map[string]any{}, want: []string{"a.txt", "bin.dat", "big.txt"}},
-		{name: "root slash", args: map[string]any{"path": "/"}, want: []string{"a.txt", "bin.dat", "big.txt"}},
+		{name: "root no path", args: map[string]any{}, want: []string{"sub", "a.txt", "bin.dat", "big.txt"}},
+		{name: "root slash", args: map[string]any{"path": "/"}, want: []string{"sub", "a.txt", "bin.dat", "big.txt"}},
 		{name: "subdir", args: map[string]any{"path": "sub"}, want: []string{"c.txt"}},
 	}
 
@@ -142,6 +164,16 @@ func TestListFiles(t *testing.T) {
 			assert.ElementsMatch(t, tc.want, listedNames(t, callTool(t, session, "list_files", tc.args)))
 		})
 	}
+}
+
+func TestListFilesTypes(t *testing.T) {
+	t.Parallel()
+
+	entries := listedTypes(t, callTool(t, connect(t, setupRoot(t)), "list_files", map[string]any{}))
+	require.NotEmpty(t, entries)
+
+	assert.Equal(t, listedEntry{name: "sub", entryType: "directory"}, entries[0])
+	assert.Contains(t, entries, listedEntry{name: "a.txt", entryType: "file"})
 }
 
 func TestListFilesEmptyDir(t *testing.T) {
@@ -326,6 +358,7 @@ func TestWriteFile(t *testing.T) {
 			require.True(t, ok, "structured content type %T", res.StructuredContent)
 			assert.Equal(t, tc.wantName, structured["name"])
 			assert.InDelta(t, len(tc.want), structured["size"], 0)
+			assert.Equal(t, "file", structured["type"])
 
 			data, err := os.ReadFile(filepath.Join(rootDir, tc.wantPath))
 			require.NoError(t, err)

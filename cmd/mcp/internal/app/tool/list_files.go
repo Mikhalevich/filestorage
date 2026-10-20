@@ -15,7 +15,7 @@ type ListFilesOutput struct {
 	Files []FileInfo `json:"files"`
 }
 
-// ListFiles returns regular files located in the input directory.
+// ListFiles returns regular files and subdirectories located in the input directory.
 func (t *Tool) ListFiles(
 	_ context.Context,
 	_ *mcp.CallToolRequest,

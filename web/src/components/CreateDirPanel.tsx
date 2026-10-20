@@ -5,6 +5,7 @@ import { ApiError, createDirectory, normalizeDir } from '../api/client'
 type Props = {
   dir: string
   onOpen: (dir: string) => void
+  onCreated: () => void
 }
 
 type Status =
@@ -13,9 +14,8 @@ type Status =
   | { kind: 'done'; path: string }
   | { kind: 'error'; message: string }
 
-// CreateDirPanel creates a subdirectory of dir. The list API returns only files,
-// so the new directory is offered as a link instead of showing up in the table.
-export function CreateDirPanel({ dir, onOpen }: Props) {
+// CreateDirPanel creates a subdirectory of dir and offers a link to open it.
+export function CreateDirPanel({ dir, onOpen, onCreated }: Props) {
   const [name, setName] = useState('')
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
 
@@ -33,6 +33,7 @@ export function CreateDirPanel({ dir, onOpen }: Props) {
       await createDirectory(dir, trimmed)
       setStatus({ kind: 'done', path: normalizeDir(`${dir}/${trimmed}`) })
       setName('')
+      onCreated()
     } catch (err) {
       setStatus({
         kind: 'error',

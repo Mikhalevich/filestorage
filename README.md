@@ -77,7 +77,7 @@ claude mcp add --transport http filestorage http://localhost:8081/mcp
 
 | Tool          | Description                                                                 |
 |---------------|-----------------------------------------------------------------------------|
-| `list_files`  | List files in a directory                                                   |
+| `list_files`  | List subdirectories and files in a directory                                |
 | `read_file`   | Read a file: UTF-8 content as text, anything else as a base64 resource (size capped by `limits.max_read_bytes`) |
 | `write_file`  | Save a new file (text or base64). Taken names get a numeric suffix          |
 | `delete_file` | Delete a file                                                               |

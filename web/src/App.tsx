@@ -110,7 +110,7 @@ export default function App() {
 
       <main>
         <UploadPanel key={dir} dir={dir} onUploaded={onUploaded} />
-        <CreateDirPanel key={`mkdir:${dir}`} dir={dir} onOpen={navigate} />
+        <CreateDirPanel key={`mkdir:${dir}`} dir={dir} onOpen={navigate} onCreated={() => setReload((r) => r + 1)} />
 
         <section aria-label="Files" aria-busy={loading}>
           {shown === undefined && <p className="muted">Loading…</p>}
@@ -136,6 +136,7 @@ export default function App() {
               highlighted={highlighted}
               deleting={deletingHere}
               onDelete={(name) => void onDelete(name)}
+              onOpenDir={(name) => navigate(normalizeDir(`${dir}/${name}`))}
             />
           )}
         </section>
