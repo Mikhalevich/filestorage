@@ -103,6 +103,11 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 
 	//nolint:contextcheck
 	if err := srv.Shutdown(shutdownCtx); err != nil {
+		// connections still open after the timeout are closed forcibly.
+		if closeErr := srv.Close(); closeErr != nil {
+			return fmt.Errorf("shutdown: %w", errors.Join(err, closeErr))
+		}
+
 		return fmt.Errorf("shutdown: %w", err)
 	}
 
