@@ -83,6 +83,8 @@ func createMux(hdl *handler.Handler) http.Handler {
 	registerHandler(mux, "POST /files/{"+handler.PathValueDirPath+"...}", hdl.FileUpload)
 	registerHandler(mux, "DELETE /files/{"+handler.PathValueFilePath+"...}", hdl.FileDelete)
 
+	registerHandler(mux, "POST /dirs/{"+handler.PathValueDirPath+"...}", hdl.DirectoryCreate)
+
 	registerHandler(mux, "GET /download/{"+handler.PathValueFilePath+"...}", hdl.FileDownload)
 
 	return mux

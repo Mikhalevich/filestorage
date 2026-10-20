@@ -66,6 +66,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dirs/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Path relative to the storage root. May contain `/` separated segments (`sub/dir`).
+                 *     Paths escaping the root (`..`) are rejected with 400.
+                 * @example sub/dir
+                 */
+                path: components["parameters"]["Path"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a directory
+         * @description Creates the last path element only: the parent directory must exist.
+         *     An existing file or directory at the path is never replaced.
+         */
+        post: operations["createDirectory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download/{path}": {
         parameters: {
             query?: never;
@@ -364,6 +392,62 @@ export interface operations {
                 };
                 content: {
                     /** @example file not found */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    createDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Path relative to the storage root. May contain `/` separated segments (`sub/dir`).
+                 *     Paths escaping the root (`..`) are rejected with 400.
+                 * @example sub/dir
+                 */
+                path: components["parameters"]["Path"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Directory was created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid directory path. Possible messages: `invalid directory path`, `not a directory`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example invalid directory path */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            /** @description Parent directory does not exist. Message: `parent directory not found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example parent directory not found */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            /** @description Path is already taken by a file or directory. Message: `directory already exists`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example directory already exists */
                     "text/plain": components["schemas"]["Error"];
                 };
             };

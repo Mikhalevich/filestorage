@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture
 
 Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are two binaries:
-- `cmd/web` serves the file storage HTTP endpoints: `GET /files/{path...}` (list), `POST /files/{path...}` (multipart upload), `DELETE /files/{path...}` and `GET /download/{path...}`.
+- `cmd/web` serves the file storage HTTP endpoints: `GET /files/{path...}` (list), `POST /files/{path...}` (multipart upload), `DELETE /files/{path...}`, `POST /dirs/{path...}` (create a directory) and `GET /download/{path...}`.
 - `cmd/mcp` is an MCP server (see below).
 
 **Startup flow** (`cmd/web/main.go` → `internal/infra/application.Run`):

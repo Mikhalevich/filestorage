@@ -88,6 +88,12 @@ func (f *fakeFileService) DeleteFile(filePath string) error {
 	return f.err
 }
 
+func (f *fakeFileService) CreateDirectory(dirPath string) error {
+	f.gotPath = dirPath
+
+	return f.err
+}
+
 func callFileList(t *testing.T, svc *fakeFileService, dirPath string) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 

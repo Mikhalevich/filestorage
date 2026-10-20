@@ -129,6 +129,44 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /dirs/{path}:
+    parameters:
+      - $ref: "#/components/parameters/Path"
+    post:
+      operationId: createDirectory
+      summary: Create a directory
+      description: |
+        Creates the last path element only: the parent directory must exist.
+        An existing file or directory at the path is never replaced.
+      tags: [directories]
+      responses:
+        "201":
+          description: Directory was created.
+        "400":
+          description: |
+            Invalid directory path. Possible messages: `invalid directory path`, `not a directory`.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "invalid directory path\n"
+        "404":
+          description: "Parent directory does not exist. Message: `parent directory not found`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "parent directory not found\n"
+        "409":
+          description: "Path is already taken by a file or directory. Message: `directory already exists`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "directory already exists\n"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /download/{path}:
     parameters:
       - $ref: "#/components/parameters/Path"
@@ -359,3 +397,5 @@ components:
 tags:
   - name: files
     description: File storage operations
+  - name: directories
+    description: Directory operations
