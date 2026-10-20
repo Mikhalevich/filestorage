@@ -23,7 +23,7 @@ paths:
   /files/:
     get:
       operationId: listRootFiles
-      summary: List files in the storage root
+      summary: List files and subdirectories in the storage root
       description: Same as `GET /files/{path}` for the storage root directory.
       tags: [files]
       responses:
@@ -51,10 +51,11 @@ paths:
       - $ref: "#/components/parameters/Path"
     get:
       operationId: listFiles
-      summary: List files in a directory
+      summary: List files and subdirectories in a directory
       description: |
-        Returns regular files located directly in the directory. Subdirectories and non-regular files are skipped.
-        Files are sorted by modification time (oldest first), ties are sorted by name.
+        Returns regular files and subdirectories located directly in the directory. Other entries (symlinks, devices…)
+        are skipped. Subdirectories come first sorted by name, then files sorted by modification time (oldest first),
+        ties are sorted by name.
       tags: [files]
       responses:
         "200":
@@ -126,6 +127,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
               example: "file not found\n"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /dirs/{path}:
+    parameters:
+      - $ref: "#/components/parameters/Path"
+    post:
+      operationId: createDirectory
+      summary: Create a directory
+      description: |
+        Creates the last path element only: the parent directory must exist.
+        An existing file or directory at the path is never replaced.
+      tags: [directories]
+      responses:
+        "201":
+          description: Directory was created.
+        "400":
+          description: |
+            Invalid directory path. Possible messages: `invalid directory path`, `not a directory`.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "invalid directory path\n"
+        "404":
+          description: "Parent directory does not exist. Message: `parent directory not found`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "parent directory not found\n"
+        "409":
+          description: "Path is already taken by a file or directory. Message: `directory already exists`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "directory already exists\n"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -288,7 +327,7 @@ components:
 
   responses:
     FileList:
-      description: Files in the directory, empty array if there are none.
+      description: Subdirectories and files in the directory, empty array if there are none.
       content:
         application/json:
           schema:
@@ -296,10 +335,16 @@ components:
             items:
               $ref: "#/components/schemas/File"
           example:
+            - name: sub
+              type: directory
+              size: 0
+              mod_time: "2026-01-01T02:00:00Z"
             - name: a.txt
+              type: file
               size: 3
               mod_time: "2026-01-01T00:00:00Z"
             - name: b.txt
+              type: file
               size: 5
               mod_time: "2026-01-01T01:00:00Z"
     StoredFiles:
@@ -313,6 +358,7 @@ components:
               $ref: "#/components/schemas/File"
           example:
             - name: a_1.txt
+              type: file
               size: 3
               mod_time: "2026-01-01T00:00:00Z"
     BadRequest:
@@ -335,16 +381,22 @@ components:
   schemas:
     File:
       type: object
-      required: [name, size, mod_time]
+      description: File or directory entry.
+      required: [name, type, size, mod_time]
       properties:
         name:
           type: string
           description: File name without directory.
           example: a.txt
+        type:
+          type: string
+          enum: [file, directory]
+          description: Entry type. Uploads always return `file`.
+          example: file
         size:
           type: integer
           format: int64
-          description: File size in bytes.
+          description: File size in bytes, 0 for directories.
           example: 3
         mod_time:
           type: string
@@ -359,3 +411,5 @@ components:
 tags:
   - name: files
     description: File storage operations
+  - name: directories
+    description: Directory operations

@@ -174,7 +174,8 @@ main {
   color: var(--muted);
 }
 
-.goto input {
+.goto input,
+.mkdir input {
   font: inherit;
   flex: 1;
   min-width: 0;
@@ -183,6 +184,13 @@ main {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
+}
+
+.mkdir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 420px;
 }
 
 .dropzone {
@@ -303,6 +311,22 @@ main {
 }
 
 .files a:hover {
+  text-decoration: underline;
+}
+
+.dir-link {
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.dir-link:hover {
   text-decoration: underline;
 }
 

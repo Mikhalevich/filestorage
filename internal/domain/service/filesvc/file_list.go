@@ -14,9 +14,9 @@ import (
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
 )
 
-// FileList returns regular files located in dirPath directory relative to the service root.
-// Subdirectories and non-regular files are skipped.
-// Files are sorted by modification time (oldest first), ties are sorted by name.
+// FileList returns regular files and subdirectories located in dirPath directory relative to the service root.
+// Other entries (symlinks, devices...) are skipped. Subdirectories come first sorted by name and have zero size,
+// files follow sorted by modification time (oldest first), ties are sorted by name.
 func (s *Service) FileList(dirPath string) ([]file.File, error) {
 	files, err := s.withRoot(
 		dirPath,
@@ -29,7 +29,7 @@ func (s *Service) FileList(dirPath string) ([]file.File, error) {
 			files := make([]file.File, 0, len(entries))
 
 			for _, entry := range entries {
-				if !entry.Type().IsRegular() {
+				if !entry.IsDir() && !entry.Type().IsRegular() {
 					continue
 				}
 
@@ -42,11 +42,17 @@ func (s *Service) FileList(dirPath string) ([]file.File, error) {
 					return nil, fmt.Errorf("file info %q: %w", entry.Name(), err)
 				}
 
-				files = append(files, file.File{
+				entryFile := file.File{
 					Name:    entry.Name(),
-					Size:    info.Size(),
+					Type:    createFileType(entry.IsDir()),
 					ModTime: info.ModTime(),
-				})
+				}
+
+				if !entryFile.IsDir() {
+					entryFile.Size = info.Size()
+				}
+
+				files = append(files, entryFile)
 			}
 
 			return files, nil
@@ -56,15 +62,37 @@ func (s *Service) FileList(dirPath string) ([]file.File, error) {
 		return nil, err
 	}
 
-	slices.SortFunc(files, func(lhs, rhs file.File) int {
+	slices.SortFunc(files, compareEntries)
+
+	return files, nil
+}
+
+func createFileType(isDir bool) file.Type {
+	if isDir {
+		return file.TypeDirectory
+	}
+
+	return file.TypeFile
+}
+
+// compareEntries orders directories before files: directories by name,
+// files by modification time and then by name.
+func compareEntries(lhs, rhs file.File) int {
+	if lhs.IsDir() != rhs.IsDir() {
+		if lhs.IsDir() {
+			return -1
+		}
+
+		return 1
+	}
+
+	if !lhs.IsDir() {
 		if c := lhs.ModTime.Compare(rhs.ModTime); c != 0 {
 			return c
 		}
+	}
 
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-
-	return files, nil
+	return strings.Compare(lhs.Name, rhs.Name)
 }
 
 func toFSPath(dirPath string) string {

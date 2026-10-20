@@ -58,6 +58,7 @@ func (s *Service) OpenFile(filePath string) (file.File, io.ReadSeekCloser, error
 
 	return file.File{
 		Name:    result.info.Name(),
+		Type:    file.TypeFile,
 		Size:    result.info.Size(),
 		ModTime: result.info.ModTime(),
 	}, result.file, nil

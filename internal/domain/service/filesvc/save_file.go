@@ -69,6 +69,7 @@ func (s *Service) SaveFile(
 
 	return file.File{
 		Name:    info.Name(),
+		Type:    file.TypeFile,
 		Size:    info.Size(),
 		ModTime: info.ModTime(),
 	}, nil

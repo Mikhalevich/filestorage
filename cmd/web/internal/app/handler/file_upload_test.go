@@ -93,8 +93,8 @@ func TestFileUploadSuccess(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rec.Code)
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.JSONEq(t, `[
-		{"name":"stored_a.txt","size":3,"mod_time":"2026-01-01T00:00:00Z"},
-		{"name":"stored_b.txt","size":5,"mod_time":"2026-01-01T00:00:00Z"}
+		{"name":"stored_a.txt","type":"file","size":3,"mod_time":"2026-01-01T00:00:00Z"},
+		{"name":"stored_b.txt","type":"file","size":5,"mod_time":"2026-01-01T00:00:00Z"}
 	]`, rec.Body.String())
 }
 

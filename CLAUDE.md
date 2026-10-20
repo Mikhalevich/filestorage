@@ -12,9 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make bench`: runs the benchmarks with `-benchmem`
 - `make lint` / `make fmt`: golangci-lint v2.14.0 with `.golangci.yml`. The Makefile installs it under `tools/bin/<version>/` the first time you run either target. CI runs the same linter version on pushes to master and on PRs, and `build_and_test.yml` runs `make build` and `make test`.
 - `make vendor`: runs `go mod tidy` and then `go mod vendor`. Dependencies are vendored and committed, so run this after any change to `go.mod`.
-- Frontend (`web/`, needs Node): `make web-install` (`npm ci`), `make web-dev` (Vite dev server, proxies `/files/` and `/download/` to `localhost:8080`; override the target with `API_TARGET`), `make web-build`, `make web-lint` (oxlint), `make web-gen`.
+- Frontend (`web/`, needs Node): `make web-install` (`npm ci`), `make web-dev` (Vite dev server, proxies `/files/`, `/download/` and `/dirs/` to `localhost:8080`; override the target with `API_TARGET`), `make web-build`, `make web-lint` (oxlint), `make web-gen`.
 
-- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/` and `/download/` to the backend. The API is also exposed on `:8080`, the MCP server on `:8081`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml`, the MCP server uses `script/docker/config-mcp.yaml`, and both share files through the `storage` named volume. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
+- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/`, `/download/` and `/dirs/` to the backend. The API is also exposed on `:8080`, the MCP server on `:8081`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml`, the MCP server uses `script/docker/config-mcp.yaml`, and both share files through the `storage` named volume. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
 
 ## Linting conventions
 
@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture
 
 Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are two binaries:
-- `cmd/web` serves the file storage HTTP endpoints: `GET /files/{path...}` (list), `POST /files/{path...}` (multipart upload), `DELETE /files/{path...}` and `GET /download/{path...}`.
+- `cmd/web` serves the file storage HTTP endpoints: `GET /files/{path...}` (list), `POST /files/{path...}` (multipart upload), `DELETE /files/{path...}`, `POST /dirs/{path...}` (create a directory) and `GET /download/{path...}`.
 - `cmd/mcp` is an MCP server (see below).
 
 **Startup flow** (`cmd/web/main.go` → `internal/infra/application.Run`):
@@ -57,7 +57,7 @@ To add a new binary, follow the `cmd/web` layout:
 
 **MCP server** (`cmd/mcp/internal/app`):
 - Built on `github.com/modelcontextprotocol/go-sdk`. It serves streamable HTTP at `/mcp`, in stateless mode because it exposes only tools. The HTTP server has no write timeout, since SSE responses can stay open. It calls `filesvc` directly, not the web API.
-- Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64) and `delete_file`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
+- Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64), `delete_file` and `create_directory`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
 - `app.Middleware` is an `mcp.Middleware` that starts a span (named after the method, plus the tool name for `tools/call`) and writes an access log line for each request.
 - Tests drive the tools through `mcp.NewInMemoryTransports` and a real `filesvc` on a temp dir.
 
@@ -66,5 +66,5 @@ Config files live in `config/`. Only the `*-example.yaml` files are committed: w
 **Frontend** (`web/`): Vite + React + TypeScript single-page app over the HTTP API.
 - `src/api/schema.d.ts` is generated from `api/openapi.yaml` by `scripts/gen-api.mjs` (openapi-typescript, `format: binary` mapped to `Blob`). It's committed and regenerated by `predev`/`prebuild`; CI fails if it's stale, so run `make web-gen` after changing the spec.
 - `src/api/client.ts` is the only place that talks to the API, through the typed `openapi-fetch` client. The storage root is the separate `/files/` route because OpenAPI path params can't be empty. Downloads are plain `<a href>` links built by `downloadURL`, not fetches.
-- The current directory lives in the URL hash (`#/sub/dir`). The list API returns only files, so subdirectories are reached by typing a path.
+- The current directory lives in the URL hash (`#/sub/dir`). The list API returns subdirectories (first, `type: directory`) and files; `FileTable` renders subdirectories as rows that navigate into them. `CreateDirPanel` creates a subdirectory of the current one.
 - `package.json` overrides `openapi-typescript`'s TypeScript peer dependency to the project's TS version.

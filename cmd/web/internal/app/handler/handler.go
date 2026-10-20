@@ -14,6 +14,7 @@ type FileService interface {
 	OpenFile(filePath string) (file.File, io.ReadSeekCloser, error)
 	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
 	DeleteFile(filePath string) error
+	CreateDirectory(dirPath string) error
 }
 
 type Handler struct {

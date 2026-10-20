@@ -43,11 +43,7 @@ func (h *Handler) FileUpload(rspWriter http.ResponseWriter, req *http.Request) e
 			return serviceError("save file", dirPath, err)
 		}
 
-		stored = append(stored, fileListResponse{
-			Name:    info.Name,
-			Size:    info.Size,
-			ModTime: info.ModTime,
-		})
+		stored = append(stored, toFileListResponse(info))
 	}
 
 	if len(stored) == 0 {

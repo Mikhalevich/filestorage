@@ -7,6 +7,7 @@ const apiTarget = process.env.API_TARGET ?? 'http://localhost:8080'
 const proxy = {
   '/files/': apiTarget,
   '/download/': apiTarget,
+  '/dirs/': apiTarget,
 }
 
 // https://vite.dev/config/

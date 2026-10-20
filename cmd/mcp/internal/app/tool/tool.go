@@ -19,6 +19,7 @@ type FileService interface {
 	OpenFile(filePath string) (file.File, io.ReadSeekCloser, error)
 	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
 	DeleteFile(filePath string) error
+	CreateDirectory(dirPath string) error
 }
 
 type Tool struct {
@@ -37,8 +38,8 @@ func New(fileSvc FileService, maxReadBytes int64) *Tool {
 func (t *Tool) Register(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_files",
-		Description: "List regular files in a directory of the file storage, sorted by modification time (oldest first). " +
-			"Subdirectories are not listed.",
+		Description: "List regular files and subdirectories in a directory of the file storage. " +
+			"Subdirectories come first sorted by name, then files sorted by modification time (oldest first).",
 		Annotations: &mcp.ToolAnnotations{
 			ReadOnlyHint:  true,
 			OpenWorldHint: new(false),
@@ -75,19 +76,31 @@ func (t *Tool) Register(server *mcp.Server) {
 			OpenWorldHint:   new(false),
 		},
 	}, handle(t.DeleteFile))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "create_directory",
+		Description: "Create a directory in the file storage. Only the last path element is created: " +
+			"the parent directory must exist. Fails if the path is already taken.",
+		Annotations: &mcp.ToolAnnotations{
+			DestructiveHint: new(false),
+			OpenWorldHint:   new(false),
+		},
+	}, handle(t.CreateDirectory))
 }
 
 type FileInfo struct {
 	Name    string    `json:"name"`
-	Size    int64     `json:"size"     jsonschema:"file size in bytes"`
+	Type    string    `json:"type"     jsonschema:"entry type: file or directory"`
+	Size    int64     `json:"size"     jsonschema:"file size in bytes, 0 for directories"`
 	ModTime time.Time `json:"mod_time" jsonschema:"last modification time"`
 }
 
-func toFileInfo(f file.File) FileInfo {
+func toFileInfo(entry file.File) FileInfo {
 	return FileInfo{
-		Name:    f.Name,
-		Size:    f.Size,
-		ModTime: f.ModTime,
+		Name:    entry.Name,
+		Type:    entry.Type.String(),
+		Size:    entry.Size,
+		ModTime: entry.ModTime,
 	}
 }
 

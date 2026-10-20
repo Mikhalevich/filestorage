@@ -9,7 +9,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List files in the storage root
+         * List files and subdirectories in the storage root
          * @description Same as `GET /files/{path}` for the storage root directory.
          */
         get: operations["listRootFiles"];
@@ -40,9 +40,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List files in a directory
-         * @description Returns regular files located directly in the directory. Subdirectories and non-regular files are skipped.
-         *     Files are sorted by modification time (oldest first), ties are sorted by name.
+         * List files and subdirectories in a directory
+         * @description Returns regular files and subdirectories located directly in the directory. Other entries (symlinks, devices…)
+         *     are skipped. Subdirectories come first sorted by name, then files sorted by modification time (oldest first),
+         *     ties are sorted by name.
          */
         get: operations["listFiles"];
         put?: never;
@@ -61,6 +62,34 @@ export interface paths {
          * @description Removes the regular file. Directories and other non-regular files are never removed.
          */
         delete: operations["deleteFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dirs/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Path relative to the storage root. May contain `/` separated segments (`sub/dir`).
+                 *     Paths escaping the root (`..`) are rejected with 400.
+                 * @example sub/dir
+                 */
+                path: components["parameters"]["Path"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a directory
+         * @description Creates the last path element only: the parent directory must exist.
+         *     An existing file or directory at the path is never replaced.
+         */
+        post: operations["createDirectory"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -99,6 +128,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description File or directory entry. */
         File: {
             /**
              * @description File name without directory.
@@ -106,8 +136,14 @@ export interface components {
              */
             name: string;
             /**
+             * @description Entry type. Uploads always return `file`.
+             * @example file
+             * @enum {string}
+             */
+            type: "file" | "directory";
+            /**
              * Format: int64
-             * @description File size in bytes.
+             * @description File size in bytes, 0 for directories.
              * @example 3
              */
             size: number;
@@ -125,7 +161,7 @@ export interface components {
         Error: string;
     };
     responses: {
-        /** @description Files in the directory, empty array if there are none. */
+        /** @description Subdirectories and files in the directory, empty array if there are none. */
         FileList: {
             headers: {
                 [name: string]: unknown;
@@ -134,12 +170,20 @@ export interface components {
                 /**
                  * @example [
                  *       {
+                 *         "name": "sub",
+                 *         "type": "directory",
+                 *         "size": 0,
+                 *         "mod_time": "2026-01-01T02:00:00Z"
+                 *       },
+                 *       {
                  *         "name": "a.txt",
+                 *         "type": "file",
                  *         "size": 3,
                  *         "mod_time": "2026-01-01T00:00:00Z"
                  *       },
                  *       {
                  *         "name": "b.txt",
+                 *         "type": "file",
                  *         "size": 5,
                  *         "mod_time": "2026-01-01T01:00:00Z"
                  *       }
@@ -158,6 +202,7 @@ export interface components {
                  * @example [
                  *       {
                  *         "name": "a_1.txt",
+                 *         "type": "file",
                  *         "size": 3,
                  *         "mod_time": "2026-01-01T00:00:00Z"
                  *       }
@@ -364,6 +409,62 @@ export interface operations {
                 };
                 content: {
                     /** @example file not found */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    createDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Path relative to the storage root. May contain `/` separated segments (`sub/dir`).
+                 *     Paths escaping the root (`..`) are rejected with 400.
+                 * @example sub/dir
+                 */
+                path: components["parameters"]["Path"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Directory was created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid directory path. Possible messages: `invalid directory path`, `not a directory`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example invalid directory path */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            /** @description Parent directory does not exist. Message: `parent directory not found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example parent directory not found */
+                    "text/plain": components["schemas"]["Error"];
+                };
+            };
+            /** @description Path is already taken by a file or directory. Message: `directory already exists`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example directory already exists */
                     "text/plain": components["schemas"]["Error"];
                 };
             };
