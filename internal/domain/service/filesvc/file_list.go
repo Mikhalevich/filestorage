@@ -44,11 +44,11 @@ func (s *Service) FileList(dirPath string) ([]file.File, error) {
 
 				entryFile := file.File{
 					Name:    entry.Name(),
+					Type:    createFileType(entry.IsDir()),
 					ModTime: info.ModTime(),
-					IsDir:   entry.IsDir(),
 				}
 
-				if !entryFile.IsDir {
+				if !entryFile.IsDir() {
 					entryFile.Size = info.Size()
 				}
 
@@ -67,18 +67,26 @@ func (s *Service) FileList(dirPath string) ([]file.File, error) {
 	return files, nil
 }
 
+func createFileType(isDir bool) file.Type {
+	if isDir {
+		return file.TypeDirectory
+	}
+
+	return file.TypeFile
+}
+
 // compareEntries orders directories before files: directories by name,
 // files by modification time and then by name.
 func compareEntries(lhs, rhs file.File) int {
-	if lhs.IsDir != rhs.IsDir {
-		if lhs.IsDir {
+	if lhs.IsDir() != rhs.IsDir() {
+		if lhs.IsDir() {
 			return -1
 		}
 
 		return 1
 	}
 
-	if !lhs.IsDir {
+	if !lhs.IsDir() {
 		if c := lhs.ModTime.Compare(rhs.ModTime); c != 0 {
 			return c
 		}

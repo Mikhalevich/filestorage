@@ -51,7 +51,7 @@ func entrySizes(t *testing.T, files []file.File) map[string]int64 {
 		assert.False(t, f.ModTime.IsZero(), "file %q: zero mod time", f.Name)
 
 		name := f.Name
-		if f.IsDir {
+		if f.IsDir() {
 			name += "/"
 		}
 

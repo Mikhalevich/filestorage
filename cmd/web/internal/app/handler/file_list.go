@@ -13,11 +13,6 @@ const (
 	PathValueDirPath = "path"
 )
 
-const (
-	entryTypeFile      = "file"
-	entryTypeDirectory = "directory"
-)
-
 type fileListResponse struct {
 	Name    string    `json:"name"`
 	Type    string    `json:"type"`
@@ -26,14 +21,9 @@ type fileListResponse struct {
 }
 
 func toFileListResponse(entry file.File) fileListResponse {
-	entryType := entryTypeFile
-	if entry.IsDir {
-		entryType = entryTypeDirectory
-	}
-
 	return fileListResponse{
 		Name:    entry.Name,
-		Type:    entryType,
+		Type:    entry.Type.String(),
 		Size:    entry.Size,
 		ModTime: entry.ModTime,
 	}

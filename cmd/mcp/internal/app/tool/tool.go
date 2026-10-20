@@ -88,11 +88,6 @@ func (t *Tool) Register(server *mcp.Server) {
 	}, handle(t.CreateDirectory))
 }
 
-const (
-	entryTypeFile      = "file"
-	entryTypeDirectory = "directory"
-)
-
 type FileInfo struct {
 	Name    string    `json:"name"`
 	Type    string    `json:"type"     jsonschema:"entry type: file or directory"`
@@ -101,14 +96,9 @@ type FileInfo struct {
 }
 
 func toFileInfo(entry file.File) FileInfo {
-	entryType := entryTypeFile
-	if entry.IsDir {
-		entryType = entryTypeDirectory
-	}
-
 	return FileInfo{
 		Name:    entry.Name,
-		Type:    entryType,
+		Type:    entry.Type.String(),
 		Size:    entry.Size,
 		ModTime: entry.ModTime,
 	}

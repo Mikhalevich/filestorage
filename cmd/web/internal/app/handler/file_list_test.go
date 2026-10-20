@@ -77,6 +77,7 @@ func (f *fakeFileService) SaveFile(dirPath string, fileName string, content io.R
 
 	return file.File{
 		Name:    "stored_" + fileName,
+		Type:    file.TypeFile,
 		Size:    int64(len(data)),
 		ModTime: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
 	}, nil
@@ -112,9 +113,9 @@ func TestFileListSuccess(t *testing.T) {
 	modTime := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	svc := &fakeFileService{
 		files: []file.File{
-			{Name: "sub", ModTime: modTime, IsDir: true},
-			{Name: "a.txt", Size: 3, ModTime: modTime},
-			{Name: "b.txt", Size: 5, ModTime: modTime.Add(time.Hour)},
+			{Name: "sub", ModTime: modTime, Type: file.TypeDirectory},
+			{Name: "a.txt", Size: 3, ModTime: modTime, Type: file.TypeFile},
+			{Name: "b.txt", Size: 5, ModTime: modTime.Add(time.Hour), Type: file.TypeFile},
 		},
 	}
 
