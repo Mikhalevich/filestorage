@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -17,9 +16,8 @@ import (
 )
 
 const (
-	shutdownTimeout = time.Second * 60
-	serverName      = "filestorage"
-	mcpPath         = "/mcp"
+	serverName = "filestorage"
+	mcpPath    = "/mcp"
 )
 
 func Start(
@@ -100,11 +98,16 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 	case <-ctx.Done():
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
 	//nolint:contextcheck
 	if err := srv.Shutdown(shutdownCtx); err != nil {
+		// connections still open after the timeout are closed forcibly.
+		if closeErr := srv.Close(); closeErr != nil {
+			return fmt.Errorf("shutdown: %w", errors.Join(err, closeErr))
+		}
+
 		return fmt.Errorf("shutdown: %w", err)
 	}
 

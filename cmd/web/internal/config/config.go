@@ -29,9 +29,10 @@ type Tracing struct {
 }
 
 type HTTPServer struct {
-	Port         int           `yaml:"port" required:"true"`
-	ReadTimeout  time.Duration `yaml:"read_timeout" required:"true"`
-	WriteTimeout time.Duration `yaml:"write_timeout" required:"true"`
+	Port            int           `yaml:"port" required:"true"`
+	ReadTimeout     time.Duration `yaml:"read_timeout" required:"true"`
+	WriteTimeout    time.Duration `yaml:"write_timeout" required:"true"`
+	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" default:"60s"`
 }
 
 type Storage struct {

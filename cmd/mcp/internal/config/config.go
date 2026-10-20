@@ -31,8 +31,9 @@ type Tracing struct {
 
 // HTTPServer has no write timeout: streamable http transport may keep SSE responses open.
 type HTTPServer struct {
-	Port        int           `yaml:"port" required:"true"`
-	ReadTimeout time.Duration `yaml:"read_timeout" required:"true"`
+	Port            int           `yaml:"port" required:"true"`
+	ReadTimeout     time.Duration `yaml:"read_timeout" required:"true"`
+	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" default:"60s"`
 }
 
 type Storage struct {

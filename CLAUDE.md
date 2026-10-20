@@ -48,7 +48,7 @@ To add a new binary, follow the `cmd/web` layout:
 
 **HTTP server** (`cmd/web/internal/app`):
 - Uses a stdlib `http.ServeMux`. The port and read/write timeouts come from the `http_server` config section (`config.HTTPServer`, passed in via `setup.Start`). Timeouts are written as Go duration strings (`10s`), which yaml.v3 decodes into `time.Duration`.
-- Shuts down gracefully when the context is cancelled, with a 60s timeout.
+- Shuts down gracefully when the context is cancelled. The timeout is `http_server.shutdown_timeout` (default `60s`, must be positive); connections still open when it expires are closed forcibly.
 - The API is described in `api/openapi.yaml`. Update it when you add or change a handler.
 - Handlers live in `cmd/web/internal/app/handler` and have the signature `func(w http.ResponseWriter, r *http.Request) error` (`app.HandlerFunc`). Register them with `registerHandler`, which adapts them through `ToHTTPHandlerFunc`:
   - Return `*httperror.HTTPError` (e.g. `httperror.InternalServerError(msg)`) to send that status and message. Use the pointer: `HTTPError` has a pointer receiver, and the adapter matches only `*HTTPError`. A status outside 400–599 is replaced with 500.

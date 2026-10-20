@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -15,10 +14,6 @@ import (
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/config"
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
 	"github.com/Mikhalevich/filestorage/internal/infra/tracing"
-)
-
-const (
-	shutdownTimeout = time.Second * 60
 )
 
 func Start(
@@ -65,11 +60,16 @@ func startServer(ctx context.Context, cfg config.HTTPServer, handler http.Handle
 	case <-ctx.Done():
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
 	//nolint:contextcheck
 	if err := srv.Shutdown(shutdownCtx); err != nil {
+		// connections still open after the timeout are closed forcibly.
+		if closeErr := srv.Close(); closeErr != nil {
+			return fmt.Errorf("shutdown: %w", errors.Join(err, closeErr))
+		}
+
 		return fmt.Errorf("shutdown: %w", err)
 	}
 
