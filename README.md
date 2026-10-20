@@ -81,6 +81,7 @@ claude mcp add --transport http filestorage http://localhost:8081/mcp
 | `read_file`   | Read a file: UTF-8 content as text, anything else as a base64 resource (size capped by `limits.max_read_bytes`) |
 | `write_file`  | Save a new file (text or base64). Taken names get a numeric suffix          |
 | `delete_file` | Delete a file                                                               |
+| `create_directory` | Create a directory; the parent must exist                              |
 
 Its config matches the web one except that `http_server` has no `write_timeout` and there is an extra `limits.max_read_bytes` field.
 

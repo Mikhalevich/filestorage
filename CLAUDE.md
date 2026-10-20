@@ -57,7 +57,7 @@ To add a new binary, follow the `cmd/web` layout:
 
 **MCP server** (`cmd/mcp/internal/app`):
 - Built on `github.com/modelcontextprotocol/go-sdk`. It serves streamable HTTP at `/mcp`, in stateless mode because it exposes only tools. The HTTP server has no write timeout, since SSE responses can stay open. It calls `filesvc` directly, not the web API.
-- Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64) and `delete_file`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
+- Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64), `delete_file` and `create_directory`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
 - `app.Middleware` is an `mcp.Middleware` that starts a span (named after the method, plus the tool name for `tools/call`) and writes an access log line for each request.
 - Tests drive the tools through `mcp.NewInMemoryTransports` and a real `filesvc` on a temp dir.
 

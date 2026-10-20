@@ -19,6 +19,7 @@ type FileService interface {
 	OpenFile(filePath string) (file.File, io.ReadSeekCloser, error)
 	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
 	DeleteFile(filePath string) error
+	CreateDirectory(dirPath string) error
 }
 
 type Tool struct {
@@ -75,6 +76,16 @@ func (t *Tool) Register(server *mcp.Server) {
 			OpenWorldHint:   new(false),
 		},
 	}, handle(t.DeleteFile))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "create_directory",
+		Description: "Create a directory in the file storage. Only the last path element is created: " +
+			"the parent directory must exist. Fails if the path is already taken.",
+		Annotations: &mcp.ToolAnnotations{
+			DestructiveHint: new(false),
+			OpenWorldHint:   new(false),
+		},
+	}, handle(t.CreateDirectory))
 }
 
 type FileInfo struct {
