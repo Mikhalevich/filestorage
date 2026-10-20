@@ -174,7 +174,8 @@ main {
   color: var(--muted);
 }
 
-.goto input {
+.goto input,
+.mkdir input {
   font: inherit;
   flex: 1;
   min-width: 0;
@@ -183,6 +184,13 @@ main {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
+}
+
+.mkdir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 420px;
 }
 
 .dropzone {

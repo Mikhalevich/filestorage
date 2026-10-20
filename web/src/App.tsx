@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError, deleteFile, listFiles, normalizeDir, type StoredFile } from './api/client'
 import { FileTable } from './components/FileTable'
 import { PathBar } from './components/PathBar'
+import { CreateDirPanel } from './components/CreateDirPanel'
 import { UploadPanel } from './components/UploadPanel'
 import { useHashDir } from './useHashDir'
 
@@ -109,6 +110,7 @@ export default function App() {
 
       <main>
         <UploadPanel key={dir} dir={dir} onUploaded={onUploaded} />
+        <CreateDirPanel key={`mkdir:${dir}`} dir={dir} onOpen={navigate} />
 
         <section aria-label="Files" aria-busy={loading}>
           {shown === undefined && <p className="muted">Loading…</p>}
