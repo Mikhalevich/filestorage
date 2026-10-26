@@ -17,24 +17,22 @@ const (
 // CreateDirectory creates dirPath directory relative to the service root.
 // Only the last path element is created: the parent directory must exist.
 func (s *Service) CreateDirectory(dirPath string) error {
-	_, err := s.withRoot(
+	return s.withRootNoReturn(
 		dirPath,
-		func(root *os.Root, fsPath string) (struct{}, error) {
+		func(root *os.Root, fsPath string) error {
 			// root.Mkdir rejects paths escaping the root with an unexported error, so validate them upfront.
 			// "." is the root itself, it always exists and can't be created.
 			if !fs.ValidPath(fsPath) || fsPath == "." {
-				return struct{}{}, fmt.Errorf("validate dir path %q: %w", fsPath, perror.InvalidArgument("invalid directory path"))
+				return fmt.Errorf("validate dir path %q: %w", fsPath, perror.InvalidArgument("invalid directory path"))
 			}
 
 			if err := root.Mkdir(fsPath, dirPerm); err != nil {
-				return struct{}{}, fmt.Errorf("create directory %q: %w", fsPath, createDirectoryError(err))
+				return fmt.Errorf("create directory %q: %w", fsPath, createDirectoryError(err))
 			}
 
-			return struct{}{}, nil
+			return nil
 		},
 	)
-
-	return err
 }
 
 // createDirectoryError attaches perror describing the failure to the original error.

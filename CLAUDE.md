@@ -46,6 +46,10 @@ To add a new binary, follow the `cmd/web` layout:
 - `logger`: a `Logger` interface backed by logrus. Get the logger with `logger.FromContext(ctx)`, which falls back to the std logger. A logrus hook adds OTel trace fields to log entries.
 - `tracing`: a `Tracer` interface with `StartSpan`, with OTel and no-op implementations. The `semconv/vX.Y.Z` import in `tracer.go` must match the schema version used by the OTel SDK's `resource.Default()`. If they differ, startup fails with `conflicting Schema URL`, so bump the import whenever you upgrade `go.opentelemetry.io/otel`.
 
+**Domain** (`internal/domain`), shared by both binaries:
+- `service/filesvc.Service` does all filesystem access. Every path is relative to `storage.root_dir`. Each method goes through `withRoot` or `withRootNoReturn`, which open an `os.Root` so a path can't escape the root, and convert the relative path with `toFSPath`. New operations should follow the same pattern.
+- `model/perror` holds the domain errors (`NotFound`, `InvalidArgument`, `AlreadyExists`). The service wraps them around the underlying OS error, and the message is safe to show to clients. The web handlers map them in `serviceError` (`handler.go`) to 404/400/409, and the MCP `handle` passes the message through. Any other error becomes a generic 500 or `internal error`.
+
 **HTTP server** (`cmd/web/internal/app`):
 - Uses a stdlib `http.ServeMux`. The port and read/write timeouts come from the `http_server` config section (`config.HTTPServer`, passed in via `setup.Start`). Timeouts are written as Go duration strings (`10s`), which yaml.v3 decodes into `time.Duration`.
 - Shuts down gracefully when the context is cancelled. The timeout is `http_server.shutdown_timeout` (default `60s`, must be positive); connections still open when it expires are closed forcibly.
