@@ -33,3 +33,21 @@ func (s *Service) withRoot[T any](
 
 	return rootFn(root, toFSPath(relativePath))
 }
+
+// withRootNoReturn opens the service root and calls rootFn with it and relativePath converted to fs path.
+// The root is closed when rootFn returns; files opened through it stay valid.
+func (s *Service) withRootNoReturn(
+	relativePath string,
+	rootFn func(root *os.Root, fsPath string) error,
+) error {
+	if _, err := s.withRoot(
+		relativePath,
+		func(root *os.Root, fsPath string) (struct{}, error) {
+			return struct{}{}, rootFn(root, fsPath)
+		},
+	); err != nil {
+		return fmt.Errorf("with root: %w", err)
+	}
+
+	return nil
+}
