@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 
 	"github.com/Mikhalevich/tgbot"
@@ -15,6 +17,9 @@ import (
 const (
 	// uploadDir is the storage directory received files are saved into.
 	defaultUploadDir = ""
+
+	// hiddenURL replaces download link in errors.
+	hiddenURL = "<telegram file link>"
 )
 
 // Upload saves document or photo from the message into the file storage and replies with the stored file name.
@@ -75,12 +80,12 @@ func (h *Handler) uploadFile(
 ) (file.File, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
-		return file.File{}, fmt.Errorf("create http request: %w", err)
+		return file.File{}, fmt.Errorf("create http request: %w", hideURL(err))
 	}
 
 	rsp, err := h.uploadDoer.Do(req)
 	if err != nil {
-		return file.File{}, fmt.Errorf("do http request: %w", err)
+		return file.File{}, fmt.Errorf("do http request: %w", hideURL(err))
 	}
 
 	defer rsp.Body.Close()
@@ -95,6 +100,16 @@ func (h *Handler) uploadFile(
 	}
 
 	return stored, nil
+}
+
+// hideURL replaces the request url in err, as telegram file download link contains the bot token.
+// The error chain is kept, so callers can still match the underlying cause.
+func hideURL(err error) error {
+	if urlErr, ok := errors.AsType[*url.Error](err); ok {
+		urlErr.URL = hiddenURL
+	}
+
+	return err
 }
 
 // documentFileName strips directory components from the user provided file name

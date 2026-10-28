@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -195,6 +196,38 @@ func TestUploadErrors(t *testing.T) {
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 			assert.Empty(t, ops.messages)
+		})
+	}
+}
+
+func TestUploadErrorHidesLink(t *testing.T) {
+	t.Parallel()
+
+	const secret = "123:SECRET-token"
+
+	tests := []struct {
+		name      string
+		serverURL string
+	}{
+		{name: "invalid link", serverURL: "http://bad host/file/bot" + secret},
+		{name: "connection refused", serverURL: "http://127.0.0.1:1/file/bot" + secret},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			hndlr, ops, _ := setup(t)
+			ops.serverURL = tc.serverURL
+
+			err := hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt"), ops)
+			require.Error(t, err)
+
+			assert.NotContains(t, err.Error(), secret)
+			assert.Contains(t, err.Error(), "<telegram file link>")
+
+			_, isURLErr := errors.AsType[*url.Error](err)
+			assert.True(t, isURLErr, "error chain is kept")
 		})
 	}
 }
