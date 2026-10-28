@@ -5,6 +5,7 @@ tracing:
 bot:
   # can also be set via BOT_TELEGRAM_TOKEN environment variable.
   token: "TELEGRAM_BOT_TOKEN"
+  workers: 5
   # webhook mode (http server on :80) when set, long polling otherwise.
   webhook_token: ""
   read_timeout: 10s

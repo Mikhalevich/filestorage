@@ -29,7 +29,8 @@ type Tracing struct {
 }
 
 type Bot struct {
-	Token string `env:"BOT_TELEGRAM_TOKEN" required:"true" yaml:"token"`
+	Token   string `env:"BOT_TELEGRAM_TOKEN" required:"true" yaml:"token"`
+	Workers int    `yaml:"workers" required:"true"`
 	// WebhookToken switches the bot to webhook mode (http server on :80), long polling is used when empty.
 	WebhookToken string `yaml:"webhook_token"`
 	// ReadTimeout, WriteTimeout and ShutdownTimeout configure webhook http server.

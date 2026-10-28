@@ -20,6 +20,7 @@ func Start(
 ) error {
 	bot, err := tgbot.New(
 		cfg.Token,
+		tgbot.WithWorkers(cfg.Workers),
 		tgbot.WithNewTracerFn(func() tgbot.Tracer {
 			return newTracer(tracing.StdTracer())
 		}),
