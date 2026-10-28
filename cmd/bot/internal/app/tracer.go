@@ -58,7 +58,10 @@ func (t *tracer) Before(ctx context.Context, pattern string, msg tgbot.Message) 
 	return logger.WithLogger(ctx, reqLog)
 }
 
-func (t *tracer) OnSuccess(context.Context) {
+func (t *tracer) OnSuccess(ctx context.Context) {
+	logger.FromContext(ctx).
+		WithField("duration", time.Since(t.start).String()).
+		Info("telegram update")
 }
 
 func (t *tracer) OnError(ctx context.Context, err error) {
