@@ -132,7 +132,7 @@ func documentFileName(doc tgbot.Document) string {
 
 func photoFileName(photo tgbot.PhotoSize) string {
 	return fmt.Sprintf("%s_%s.jpg",
-		time.Now().Format(time.DateTime),
+		time.Now().UTC().Format("20060102_150405"),
 		trimLen(photo.FileID, maxPhotoFileIDName),
 	)
 }
@@ -142,7 +142,7 @@ func trimLen(name string, maxLen int) string {
 		return name
 	}
 
-	return name[:maxLen]
+	return name[len(name)-maxLen:]
 }
 
 func formatSizeSI(size int64) string {
