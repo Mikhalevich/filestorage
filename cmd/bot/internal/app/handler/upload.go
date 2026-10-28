@@ -22,7 +22,8 @@ const (
 	// hiddenURL replaces download link in errors.
 	hiddenURL = "<telegram file link>"
 
-	maxPhotoFileIDName = 10
+	// maxPhotoFileIDSuffixLen is how many trailing file id characters go into a photo file name.
+	maxPhotoFileIDSuffixLen = 10
 )
 
 // Upload saves document or photo from the message into the file storage and replies with the stored file name.
@@ -133,7 +134,7 @@ func documentFileName(doc tgbot.Document) string {
 func photoFileName(photo tgbot.PhotoSize) string {
 	return fmt.Sprintf("%s_%s.jpg",
 		time.Now().UTC().Format("20060102_150405"),
-		trimLen(photo.FileID, maxPhotoFileIDName),
+		trimLen(photo.FileID, maxPhotoFileIDSuffixLen),
 	)
 }
 
