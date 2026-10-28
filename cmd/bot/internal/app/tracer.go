@@ -23,10 +23,8 @@ const (
 type tracer struct {
 	tracer tracing.Tracer
 
-	start  time.Time
-	span   trace.Span
-	reqLog logger.Logger
-	err    error
+	start time.Time
+	span  trace.Span
 }
 
 func newTracer(t tracing.Tracer) *tracer {
@@ -50,38 +48,31 @@ func (t *tracer) Before(ctx context.Context, pattern string, msg tgbot.Message) 
 		),
 	)
 
-	t.reqLog = logger.FromContext(ctx).WithFields(logger.Fields{
+	reqLog := logger.FromContext(ctx).WithFields(logger.Fields{
 		"pattern":      pattern,
 		"chat_id":      msg.ChatID,
 		"message_type": msgType,
 		"username":     msg.User.Username,
 	})
 
-	return logger.WithLogger(ctx, t.reqLog)
+	return logger.WithLogger(ctx, reqLog)
 }
 
 func (t *tracer) OnSuccess(context.Context) {
 }
 
-func (t *tracer) OnError(_ context.Context, err error) {
-	t.err = err
-
+func (t *tracer) OnError(ctx context.Context, err error) {
 	t.span.RecordError(err)
 	t.span.SetStatus(codes.Error, err.Error())
+
+	logger.FromContext(ctx).
+		WithField("duration", time.Since(t.start).String()).
+		WithError(err).
+		Error("telegram update")
 }
 
 func (t *tracer) After(context.Context) {
-	defer t.span.End()
-
-	accessLog := t.reqLog.WithField("duration", time.Since(t.start).String())
-
-	if t.err != nil {
-		accessLog.WithError(t.err).Error("telegram update")
-
-		return
-	}
-
-	accessLog.Info("telegram update")
+	t.span.End()
 }
 
 func messageTypeName(msgType tgbot.Type) string {
