@@ -32,8 +32,6 @@ type Bot struct {
 	Token string `env:"BOT_TELEGRAM_TOKEN" required:"true" yaml:"token"`
 	// WebhookToken switches the bot to webhook mode (http server on :80), long polling is used when empty.
 	WebhookToken string `yaml:"webhook_token"`
-	// DownloadTimeout limits downloading of a single file from telegram.
-	DownloadTimeout time.Duration `default:"60s" yaml:"download_timeout"`
 	// ReadTimeout, WriteTimeout and ShutdownTimeout configure webhook http server.
 	ReadTimeout     time.Duration `default:"10s" yaml:"read_timeout"`
 	WriteTimeout    time.Duration `default:"10s" yaml:"write_timeout"`

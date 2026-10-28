@@ -5,6 +5,5 @@ tracing:
 bot:
   # set via BOT_TELEGRAM_TOKEN environment variable.
   token: ""
-  download_timeout: 60s
 storage:
   root_dir: "/data/storage"

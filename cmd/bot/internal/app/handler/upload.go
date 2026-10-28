@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"path"
 
@@ -14,43 +13,25 @@ import (
 )
 
 const (
-	// MaxFileSize is the maximum size of a file the bot api allows to download.
-	MaxFileSize = 20 * 1024 * 1024
-
 	// uploadDir is the storage directory received files are saved into.
-	uploadDir = ""
+	defaultUploadDir = ""
 )
-
-type FileService interface {
-	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
-}
-
-type Handler struct {
-	fileSvc    FileService
-	httpClient *http.Client
-}
-
-func New(fileSvc FileService, httpClient *http.Client) *Handler {
-	return &Handler{
-		fileSvc:    fileSvc,
-		httpClient: httpClient,
-	}
-}
 
 // Upload saves document or photo from the message into the file storage and replies with the stored file name.
 // Known domain errors are sent to the chat, other errors are returned (tgbot replies with generic error).
-func (h *Handler) Upload(ctx context.Context, msg tgbot.Message, operations tgbot.Operations) error {
-	var fileID, fileName string
+func (h *Handler) Upload(
+	ctx context.Context,
+	msg tgbot.Message,
+	operations tgbot.Operations,
+) error {
+	var (
+		fileID   string
+		fileName string
+	)
 
 	//nolint:exhaustive
 	switch msg.Type {
 	case tgbot.TypeDocument:
-		if msg.Document.FileSize > MaxFileSize {
-			operations.SendMessage(ctx, msg.ChatID, fmt.Sprintf("file is too large, max size is %d bytes", MaxFileSize))
-
-			return nil
-		}
-
 		fileID = msg.Document.FileID
 		fileName = documentFileName(msg.Document)
 	case tgbot.TypePhoto:
@@ -62,12 +43,15 @@ func (h *Handler) Upload(ctx context.Context, msg tgbot.Message, operations tgbo
 		fileID = photo.FileID
 		fileName = photo.FileID + ".jpg"
 	default:
-		operations.SendMessage(ctx, msg.ChatID, "send a document or photo to upload it")
-
 		return nil
 	}
 
-	stored, err := h.uploadFile(ctx, operations, fileID, fileName)
+	link, err := operations.GetDownloadLink(ctx, fileID)
+	if err != nil {
+		return fmt.Errorf("get download link: %w", err)
+	}
+
+	stored, err := h.uploadFile(ctx, link, defaultUploadDir, fileName)
 	if err != nil {
 		if perr, ok := perror.ParseError(err); ok && perr.Type != perror.TypeUnspecified {
 			operations.SendMessage(ctx, msg.ChatID, perr.Message)
@@ -85,21 +69,16 @@ func (h *Handler) Upload(ctx context.Context, msg tgbot.Message, operations tgbo
 
 func (h *Handler) uploadFile(
 	ctx context.Context,
-	operations tgbot.Operations,
-	fileID string,
+	link string,
+	dir string,
 	fileName string,
 ) (file.File, error) {
-	link, err := operations.GetDownloadLink(ctx, fileID)
-	if err != nil {
-		return file.File{}, fmt.Errorf("get download link: %w", err)
-	}
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
 		return file.File{}, fmt.Errorf("create http request: %w", err)
 	}
 
-	rsp, err := h.httpClient.Do(req)
+	rsp, err := h.uploadDoer.Do(req)
 	if err != nil {
 		return file.File{}, fmt.Errorf("do http request: %w", err)
 	}
@@ -110,7 +89,7 @@ func (h *Handler) uploadFile(
 		return file.File{}, fmt.Errorf("unexpected http status: %s", rsp.Status)
 	}
 
-	stored, err := h.fileSvc.SaveFile(uploadDir, fileName, rsp.Body)
+	stored, err := h.fileSvc.SaveFile(dir, fileName, rsp.Body)
 	if err != nil {
 		return file.File{}, fmt.Errorf("save file: %w", err)
 	}

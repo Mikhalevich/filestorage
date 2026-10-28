@@ -18,32 +18,33 @@ func Start(
 	cfg config.Bot,
 	fileSvc handler.FileService,
 ) error {
-	opts := []tgbot.Option{
+	bot, err := tgbot.New(
+		cfg.Token,
 		tgbot.WithNewTracerFn(func() tgbot.Tracer {
 			return newTracer(tracing.StdTracer())
 		}),
+		tgbot.WithWebHookToken(cfg.WebhookToken),
 		tgbot.WithReadTimeout(cfg.ReadTimeout),
 		tgbot.WithWriteTimeout(cfg.WriteTimeout),
-		tgbot.WithShutdownTimeout(cfg.ShutdownTimeout),
-	}
-
-	if cfg.WebhookToken != "" {
-		opts = append(opts, tgbot.WithWebHookToken(cfg.WebhookToken))
-	}
-
-	bot, err := tgbot.New(cfg.Token, opts...)
+		tgbot.WithShutdownTimeout(cfg.ShutdownTimeout))
 	if err != nil {
 		return fmt.Errorf("create bot: %w", err)
 	}
 
-	bot.AddDefaultHandler(handler.New(
+	hndlr := handler.New(
 		fileSvc,
-		&http.Client{Timeout: cfg.DownloadTimeout},
-	).Upload)
+		&http.Client{},
+	)
+
+	routes(bot, hndlr)
 
 	if err := bot.Start(ctx); err != nil {
 		return fmt.Errorf("start bot: %w", err)
 	}
 
 	return nil
+}
+
+func routes(bot *tgbot.TGBot, hndlr *handler.Handler) {
+	bot.AddDefaultHandler(hndlr.Upload)
 }
