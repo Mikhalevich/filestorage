@@ -1,0 +1,15 @@
+log_level: "info"
+tracing:
+  endpoint: "jaeger:4318"
+  service_name: "bot"
+bot:
+  # can also be set via BOT_TELEGRAM_TOKEN environment variable.
+  token: "TELEGRAM_BOT_TOKEN"
+  # webhook mode (http server on :80) when set, long polling otherwise.
+  webhook_token: ""
+  download_timeout: 60s
+  read_timeout: 10s
+  write_timeout: 10s
+  shutdown_timeout: 30s
+storage:
+  root_dir: "./storage"

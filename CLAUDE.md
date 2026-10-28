@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `make build`: builds `./cmd/web` into `bin/web` and `./cmd/mcp` into `bin/mcp` with `-mod=vendor`
+- `make build`: builds `./cmd/web` into `bin/web`, `./cmd/mcp` into `bin/mcp` and `./cmd/bot` into `bin/bot` with `-mod=vendor`
 - `make run-web`: runs `bin/web -config=./config/config-web.yaml` (build first). `config/config-web.yaml` is git-ignored, so create it first with `cp config/config-web-example.yaml config/config-web.yaml`.
 - `make run-mcp`: runs `bin/mcp -config=./config/config-mcp.yaml`. That file is also git-ignored, so create it from `config/config-mcp-example.yaml`.
+- `make run-bot`: runs `bin/bot -config=./config/config-bot.yaml`. Also git-ignored, so create it from `config/config-bot-example.yaml`. The Telegram token can come from the `BOT_TELEGRAM_TOKEN` env var instead.
 - `make test`: `go test ./...`
 - Single test: `go test -mod=vendor ./path/to/pkg -run '^TestName$'`
 - `make bench`: runs the benchmarks with `-benchmem`
@@ -14,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make vendor`: runs `go mod tidy` and then `go mod vendor`. Dependencies are vendored and committed, so run this after any change to `go.mod`.
 - Frontend (`web/`, needs Node): `make web-install` (`npm ci`), `make web-dev` (Vite dev server, proxies `/files/`, `/download/` and `/dirs/` to `localhost:8080`; override the target with `API_TARGET`), `make web-build`, `make web-lint` (oxlint), `make web-gen`.
 
-- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/`, `/download/` and `/dirs/` to the backend. The API is also exposed on `:8080`, the MCP server on `:8081`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml`, the MCP server uses `script/docker/config-mcp.yaml`, and both share files through the `storage` named volume. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
+- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/`, `/download/` and `/dirs/` to the backend. The API is also exposed on `:8080`, the MCP server on `:8081`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml`, the MCP server uses `script/docker/config-mcp.yaml`, and both share files through the `storage` named volume. The Telegram bot service (`script/docker/config-bot.yaml`) is in the `bot` compose profile, so it starts only with `--profile bot` and needs `BOT_TELEGRAM_TOKEN` in the environment. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
 
 ## Linting conventions
 
@@ -25,9 +26,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are two binaries:
+Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are three binaries:
 - `cmd/web` serves the file storage HTTP endpoints: `GET /files/{path...}` (list), `POST /files/{path...}` (multipart upload), `DELETE /files/{path...}`, `POST /dirs/{path...}` (create a directory) and `GET /download/{path...}`.
 - `cmd/mcp` is an MCP server (see below).
+- `cmd/bot` is a Telegram bot that saves received files into storage (see below).
 
 **Startup flow** (`cmd/web/main.go` → `internal/infra/application.Run`):
 1. `LoadConfig` parses the `-config` flag, which is required and has no default, and loads YAML with `jinzhu/configor` into the binary's config struct. Struct tags `required:"true"` enforce required fields.
@@ -64,6 +66,13 @@ To add a new binary, follow the `cmd/web` layout:
 - Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64), `delete_file` and `create_directory`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
 - `app.Middleware` is an `mcp.Middleware` that starts a span (named after the method, plus the tool name for `tools/call`) and writes an access log line for each request.
 - Tests drive the tools through `mcp.NewInMemoryTransports` and a real `filesvc` on a temp dir.
+
+**Telegram bot** (`cmd/bot/internal/app`):
+- Built on `github.com/Mikhalevich/tgbot`, a wrapper over `go-telegram/bot`. If `telegram.webhook_token` is empty, the bot uses long polling. If it's set, tgbot runs in webhook mode with its own HTTP server on a hardcoded `:80`, which also serves `/live` and `/ready`.
+- There's one default handler, `handler.Upload`. It downloads a document, or the largest size of a photo (saved as `<file_id>.jpg`), through `GetDownloadLink` with an `http.Client` limited by `telegram.download_timeout`. It saves the file into the storage root with `filesvc.SaveFile`, so a taken name gets a `_N` suffix, then replies with the stored name. Documents over the Bot API's 20 MB download limit are rejected up front. Other message types get a usage hint.
+- There's no access control: anyone who messages the bot can upload.
+- `perror` messages are sent to the chat. Any other error is returned, and tgbot replies `internal error`.
+- `app/tracer.go` adapts `tgbot.Tracer`, which is created per update, to a span plus an access log line, like the MCP middleware.
 
 Config files live in `config/`. Only the `*-example.yaml` files are committed: when you add a config field, add it there too. The tracing endpoint `jaeger:4318` assumes a docker-compose network.
 
