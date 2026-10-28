@@ -48,7 +48,7 @@ To add a new binary, follow the `cmd/web` layout:
 - `logger`: a `Logger` interface backed by logrus. Get the logger with `logger.FromContext(ctx)`, which falls back to the std logger. A logrus hook adds OTel trace fields to log entries.
 - `tracing`: a `Tracer` interface with `StartSpan`, with OTel and no-op implementations. The `semconv/vX.Y.Z` import in `tracer.go` must match the schema version used by the OTel SDK's `resource.Default()`. If they differ, startup fails with `conflicting Schema URL`, so bump the import whenever you upgrade `go.opentelemetry.io/otel`.
 
-**Domain** (`internal/domain`), shared by both binaries:
+**Domain** (`internal/domain`), shared by all binaries:
 - `service/filesvc.Service` does all filesystem access. Every path is relative to `storage.root_dir`. Each method goes through `withRoot` or `withRootNoReturn`, which open an `os.Root` so a path can't escape the root, and convert the relative path with `toFSPath`. New operations should follow the same pattern.
 - `model/perror` holds the domain errors (`NotFound`, `InvalidArgument`, `AlreadyExists`). The service wraps them around the underlying OS error, and the message is safe to show to clients. The web handlers map them in `serviceError` (`handler.go`) to 404/400/409, and the MCP `handle` passes the message through. Any other error becomes a generic 500 or `internal error`.
 
@@ -68,11 +68,13 @@ To add a new binary, follow the `cmd/web` layout:
 - Tests drive the tools through `mcp.NewInMemoryTransports` and a real `filesvc` on a temp dir.
 
 **Telegram bot** (`cmd/bot/internal/app`):
-- Built on `github.com/Mikhalevich/tgbot`, a wrapper over `go-telegram/bot`. If `telegram.webhook_token` is empty, the bot uses long polling. If it's set, tgbot runs in webhook mode with its own HTTP server on a hardcoded `:80`, which also serves `/live` and `/ready`.
-- There's one default handler, `handler.Upload`. It downloads a document, or the largest size of a photo (saved as `<file_id>.jpg`), through `GetDownloadLink` with an `http.Client` limited by `telegram.download_timeout`. It saves the file into the storage root with `filesvc.SaveFile`, so a taken name gets a `_N` suffix, then replies with the stored name. Documents over the Bot API's 20 MB download limit are rejected up front. Other message types get a usage hint.
+- Built on `github.com/Mikhalevich/tgbot`, a wrapper over `go-telegram/bot`. If `bot.webhook_token` is empty, the bot uses long polling. If it's set, tgbot runs in webhook mode with its own HTTP server on a hardcoded `:80`, which also serves `/live` and `/ready`. `bot.read_timeout`, `bot.write_timeout` and `bot.shutdown_timeout` configure that server.
+- Routes are registered in `routes` (`app.go`). There's one default handler, `handler.Upload` (`handler.Handler` is built in `handler/handler.go` from a `FileService` and an HTTP `Doer`). It downloads a document, or the largest size of a photo (saved as `<file_id>.jpg`), from the `GetDownloadLink` URL. It saves the file into the storage root with `filesvc.SaveFile`, so a taken name gets a `_N` suffix, then replies with the stored name. Other message types are ignored silently.
+- The download `http.Client` has no timeout, and file size isn't checked up front. The Bot API refuses downloads over 20 MB, and that surfaces as `internal error`.
 - There's no access control: anyone who messages the bot can upload.
 - `perror` messages are sent to the chat. Any other error is returned, and tgbot replies `internal error`.
 - `app/tracer.go` adapts `tgbot.Tracer`, which is created per update, to a span plus an access log line, like the MCP middleware.
+- Tests (`handler/upload_test.go`) use a fake `tgbot.Operations` whose download links point at an `httptest` server, and a real `filesvc` on a temp dir.
 
 Config files live in `config/`. Only the `*-example.yaml` files are committed: when you add a config field, add it there too. The tracing endpoint `jaeger:4318` assumes a docker-compose network.
 

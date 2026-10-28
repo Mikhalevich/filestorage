@@ -67,14 +67,14 @@ func setup(t *testing.T) (*handler.Handler, *fakeOperations, string) {
 		rootDir
 }
 
-func documentMessage(fileID, fileName string, size int64) tgbot.Message {
+func documentMessage(fileID, fileName string) tgbot.Message {
 	return tgbot.Message{
 		Type:   tgbot.TypeDocument,
 		ChatID: testChatID,
 		Document: tgbot.Document{
 			FileID:   fileID,
 			FileName: fileName,
-			FileSize: size,
+			FileSize: 10,
 		},
 	}
 }
@@ -93,7 +93,7 @@ func TestUploadDocument(t *testing.T) {
 
 	hndlr, ops, rootDir := setup(t)
 
-	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt", 10), ops))
+	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt"), ops))
 
 	assert.Equal(t, "content of doc1", readFile(t, filepath.Join(rootDir, "a.txt")))
 	assert.Equal(t, []string{"saved as a.txt (15 bytes)"}, ops.messages)
@@ -104,8 +104,8 @@ func TestUploadDocumentDuplicateName(t *testing.T) {
 
 	hndlr, ops, rootDir := setup(t)
 
-	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt", 10), ops))
-	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc2", "a.txt", 10), ops))
+	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt"), ops))
+	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc2", "a.txt"), ops))
 
 	assert.Equal(t, "content of doc1", readFile(t, filepath.Join(rootDir, "a.txt")))
 	assert.Equal(t, "content of doc2", readFile(t, filepath.Join(rootDir, "a_1.txt")))
@@ -132,25 +132,11 @@ func TestUploadDocumentSanitizeName(t *testing.T) {
 
 			hndlr, ops, rootDir := setup(t)
 
-			require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", tc.fileName, 10), ops))
+			require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", tc.fileName), ops))
 
 			assert.Equal(t, "content of doc1", readFile(t, filepath.Join(rootDir, tc.expected)))
 		})
 	}
-}
-
-func TestUploadDocumentTooLarge(t *testing.T) {
-	t.Parallel()
-
-	hndlr, ops, rootDir := setup(t)
-
-	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt", handler.MaxFileSize+1), ops))
-
-	entries, err := os.ReadDir(rootDir)
-	require.NoError(t, err)
-	assert.Empty(t, entries)
-	assert.Len(t, ops.messages, 1)
-	assert.Contains(t, ops.messages[0], "file is too large")
 }
 
 func TestUploadPhoto(t *testing.T) {
@@ -172,7 +158,7 @@ func TestUploadPhoto(t *testing.T) {
 	assert.Equal(t, []string{"saved as large.jpg (16 bytes)"}, ops.messages)
 }
 
-func TestUploadText(t *testing.T) {
+func TestUploadTextIgnored(t *testing.T) {
 	t.Parallel()
 
 	hndlr, ops, _ := setup(t)
@@ -183,7 +169,7 @@ func TestUploadText(t *testing.T) {
 		Text:   "hello",
 	}, ops))
 
-	assert.Equal(t, []string{"send a document or photo to upload it"}, ops.messages)
+	assert.Empty(t, ops.messages)
 }
 
 func TestUploadErrors(t *testing.T) {
@@ -203,7 +189,7 @@ func TestUploadErrors(t *testing.T) {
 
 			hndlr, ops, rootDir := setup(t)
 
-			require.Error(t, hndlr.Upload(t.Context(), documentMessage(tc.fileID, "a.txt", 10), ops))
+			require.Error(t, hndlr.Upload(t.Context(), documentMessage(tc.fileID, "a.txt"), ops))
 
 			entries, err := os.ReadDir(rootDir)
 			require.NoError(t, err)
