@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"time"
 
 	"github.com/Mikhalevich/tgbot"
 
@@ -20,6 +21,9 @@ const (
 
 	// hiddenURL replaces download link in errors.
 	hiddenURL = "<telegram file link>"
+
+	// maxPhotoFileIDSuffixLen is how many trailing file id characters go into a photo file name.
+	maxPhotoFileIDSuffixLen = 10
 )
 
 // Upload saves document or photo from the message into the file storage and replies with the stored file name.
@@ -46,7 +50,7 @@ func (h *Handler) Upload(
 		}
 
 		fileID = photo.FileID
-		fileName = photo.FileID + ".jpg"
+		fileName = photoFileName(photo)
 	default:
 		return nil
 	}
@@ -67,7 +71,11 @@ func (h *Handler) Upload(
 		return fmt.Errorf("upload file %q: %w", fileName, err)
 	}
 
-	operations.SendMessage(ctx, msg.ChatID, fmt.Sprintf("saved as %s (%d bytes)", stored.Name, stored.Size))
+	operations.SendMessage(
+		ctx,
+		msg.ChatID,
+		fmt.Sprintf("saved as %s (%s)", stored.Name, formatSizeSI(stored.Size)),
+	)
 
 	return nil
 }
@@ -121,4 +129,34 @@ func documentFileName(doc tgbot.Document) string {
 	}
 
 	return fileName
+}
+
+func photoFileName(photo tgbot.PhotoSize) string {
+	return fmt.Sprintf("%s_%s.jpg",
+		time.Now().UTC().Format("20060102_150405"),
+		trimLen(photo.FileID, maxPhotoFileIDSuffixLen),
+	)
+}
+
+func trimLen(name string, maxLen int) string {
+	if len(name) <= maxLen {
+		return name
+	}
+
+	return name[len(name)-maxLen:]
+}
+
+func formatSizeSI(size int64) string {
+	const unit = 1000
+	if size < unit {
+		return fmt.Sprintf("%d B", size)
+	}
+
+	div, exp := int64(unit), 0
+	for n := size / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	return fmt.Sprintf("%.2f %cB", float64(size)/float64(div), "kMGTPE"[exp])
 }

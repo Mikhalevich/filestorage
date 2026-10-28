@@ -97,7 +97,7 @@ func TestUploadDocument(t *testing.T) {
 	require.NoError(t, hndlr.Upload(t.Context(), documentMessage("doc1", "a.txt"), ops))
 
 	assert.Equal(t, "content of doc1", readFile(t, filepath.Join(rootDir, "a.txt")))
-	assert.Equal(t, []string{"saved as a.txt (15 bytes)"}, ops.messages)
+	assert.Equal(t, []string{"saved as a.txt (15 B)"}, ops.messages)
 }
 
 func TestUploadDocumentDuplicateName(t *testing.T) {
@@ -110,7 +110,7 @@ func TestUploadDocumentDuplicateName(t *testing.T) {
 
 	assert.Equal(t, "content of doc1", readFile(t, filepath.Join(rootDir, "a.txt")))
 	assert.Equal(t, "content of doc2", readFile(t, filepath.Join(rootDir, "a_1.txt")))
-	assert.Equal(t, []string{"saved as a.txt (15 bytes)", "saved as a_1.txt (15 bytes)"}, ops.messages)
+	assert.Equal(t, []string{"saved as a.txt (15 B)", "saved as a_1.txt (15 B)"}, ops.messages)
 }
 
 func TestUploadDocumentSanitizeName(t *testing.T) {
@@ -155,8 +155,15 @@ func TestUploadPhoto(t *testing.T) {
 		},
 	}, ops))
 
-	assert.Equal(t, "content of large", readFile(t, filepath.Join(rootDir, "large.jpg")))
-	assert.Equal(t, []string{"saved as large.jpg (16 bytes)"}, ops.messages)
+	entries, err := os.ReadDir(rootDir)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+
+	// name is <UTC timestamp>_<file id suffix>.jpg, the timestamp is not known in advance.
+	name := entries[0].Name()
+	assert.Regexp(t, `^\d{8}_\d{6}_large\.jpg$`, name)
+	assert.Equal(t, "content of large", readFile(t, filepath.Join(rootDir, name)))
+	assert.Equal(t, []string{"saved as " + name + " (16 B)"}, ops.messages)
 }
 
 func TestUploadTextIgnored(t *testing.T) {
