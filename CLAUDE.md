@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `make build`: builds `./cmd/web` into `bin/web` and `./cmd/mcp` into `bin/mcp` with `-mod=vendor`
+- `make build`: builds `./cmd/web` into `bin/web`, `./cmd/mcp` into `bin/mcp` and `./cmd/bot` into `bin/bot` with `-mod=vendor`
 - `make run-web`: runs `bin/web -config=./config/config-web.yaml` (build first). `config/config-web.yaml` is git-ignored, so create it first with `cp config/config-web-example.yaml config/config-web.yaml`.
 - `make run-mcp`: runs `bin/mcp -config=./config/config-mcp.yaml`. That file is also git-ignored, so create it from `config/config-mcp-example.yaml`.
+- `make run-bot`: runs `bin/bot -config=./config/config-bot.yaml`. Also git-ignored, so create it from `config/config-bot-example.yaml`. The Telegram token can come from the `BOT_TELEGRAM_TOKEN` env var instead.
 - `make test`: `go test ./...`
 - Single test: `go test -mod=vendor ./path/to/pkg -run '^TestName$'`
 - `make bench`: runs the benchmarks with `-benchmem`
@@ -14,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make vendor`: runs `go mod tidy` and then `go mod vendor`. Dependencies are vendored and committed, so run this after any change to `go.mod`.
 - Frontend (`web/`, needs Node): `make web-install` (`npm ci`), `make web-dev` (Vite dev server, proxies `/files/`, `/download/` and `/dirs/` to `localhost:8080`; override the target with `API_TARGET`), `make web-build`, `make web-lint` (oxlint), `make web-gen`.
 
-- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/`, `/download/` and `/dirs/` to the backend. The API is also exposed on `:8080`, the MCP server on `:8081`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml`, the MCP server uses `script/docker/config-mcp.yaml`, and both share files through the `storage` named volume. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
+- `make compose-up` / `make compose-down`: build and run the full stack from `script/docker/docker-compose.yml`. The UI is served by nginx at `localhost:3000` and proxies `/files/`, `/download/` and `/dirs/` to the backend. The API is also exposed on `:8080`, the MCP server on `:8081`, and the Jaeger UI on `:16686`. The backend uses `script/docker/config-web.yaml`, the MCP server uses `script/docker/config-mcp.yaml`, the Telegram bot uses `script/docker/config-bot.yaml`, and all three share files through the `storage` named volume. The bot is part of the stack and its token is required (`${BOT_TELEGRAM_TOKEN:?...}`). Compose interpolates the whole file for every command, so `compose-up` and `compose-down` both fail unless `BOT_TELEGRAM_TOKEN` is set in the environment. `.git` is excluded from the build context, so the image is built with `-buildvcs=false` and reports an empty service version.
 
 ## Linting conventions
 
@@ -25,9 +26,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are two binaries:
+Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are three binaries:
 - `cmd/web` serves the file storage HTTP endpoints: `GET /files/{path...}` (list), `POST /files/{path...}` (multipart upload), `DELETE /files/{path...}`, `POST /dirs/{path...}` (create a directory) and `GET /download/{path...}`.
 - `cmd/mcp` is an MCP server (see below).
+- `cmd/bot` is a Telegram bot that saves received files into storage (see below).
 
 **Startup flow** (`cmd/web/main.go` → `internal/infra/application.Run`):
 1. `LoadConfig` parses the `-config` flag, which is required and has no default, and loads YAML with `jinzhu/configor` into the binary's config struct. Struct tags `required:"true"` enforce required fields.
@@ -46,7 +48,7 @@ To add a new binary, follow the `cmd/web` layout:
 - `logger`: a `Logger` interface backed by logrus. Get the logger with `logger.FromContext(ctx)`, which falls back to the std logger. A logrus hook adds OTel trace fields to log entries.
 - `tracing`: a `Tracer` interface with `StartSpan`, with OTel and no-op implementations. The `semconv/vX.Y.Z` import in `tracer.go` must match the schema version used by the OTel SDK's `resource.Default()`. If they differ, startup fails with `conflicting Schema URL`, so bump the import whenever you upgrade `go.opentelemetry.io/otel`.
 
-**Domain** (`internal/domain`), shared by both binaries:
+**Domain** (`internal/domain`), shared by all binaries:
 - `service/filesvc.Service` does all filesystem access. Every path is relative to `storage.root_dir`. Each method goes through `withRoot` or `withRootNoReturn`, which open an `os.Root` so a path can't escape the root, and convert the relative path with `toFSPath`. New operations should follow the same pattern.
 - `model/perror` holds the domain errors (`NotFound`, `InvalidArgument`, `AlreadyExists`). The service wraps them around the underlying OS error, and the message is safe to show to clients. The web handlers map them in `serviceError` (`handler.go`) to 404/400/409, and the MCP `handle` passes the message through. Any other error becomes a generic 500 or `internal error`.
 
@@ -64,6 +66,16 @@ To add a new binary, follow the `cmd/web` layout:
 - Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64), `delete_file` and `create_directory`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
 - `app.Middleware` is an `mcp.Middleware` that starts a span (named after the method, plus the tool name for `tools/call`) and writes an access log line for each request.
 - Tests drive the tools through `mcp.NewInMemoryTransports` and a real `filesvc` on a temp dir.
+
+**Telegram bot** (`cmd/bot/internal/app`):
+- Built on `github.com/Mikhalevich/tgbot`, a wrapper over `go-telegram/bot`. If `bot.webhook_token` is empty, the bot uses long polling. If it's set, tgbot runs in webhook mode with its own HTTP server on a hardcoded `:80`, which also serves `/live` and `/ready`. `bot.read_timeout`, `bot.write_timeout` and `bot.shutdown_timeout` configure that server.
+- Routes are registered in `routes` (`app.go`). There's one default handler, `handler.Upload` (`handler.Handler` is built in `handler/handler.go` from a `FileService` and an HTTP `Doer`). It downloads a document, or the largest size of a photo (saved as `<file_id>.jpg`), from the `GetDownloadLink` URL. It saves the file into the storage root with `filesvc.SaveFile`, so a taken name gets a `_N` suffix, then replies with the stored name. Other message types are ignored silently.
+- The download `http.Client` has no timeout, and file size isn't checked up front. The Bot API refuses downloads over 20 MB, and that surfaces as `internal error`.
+- There's no access control: anyone who messages the bot can upload.
+- `perror` messages are sent to the chat. Any other error is returned, and tgbot replies `internal error`.
+- The file download link contains the bot token. `hideURL` (`upload.go`) replaces the URL inside any `*url.Error` with `<telegram file link>` before wrapping with `%w`, so the token never reaches logs or spans. Apply it to every error that can carry the link. Errors from tgbot's own API calls (e.g. `GetDownloadLink`) are already redacted by go-telegram.
+- `app/tracer.go` adapts `tgbot.Tracer`, which is created per update, so it keeps per-update state (start time, span). `Before` starts the span and puts a request logger (pattern, chat_id, message_type, username) into the ctx. `OnSuccess` writes the access log line at Info and `OnError` at Error, both with the duration; `OnError` also records the error on the span. `After` only ends the span.
+- Tests (`handler/upload_test.go`) use a fake `tgbot.Operations` whose download links point at an `httptest` server, and a real `filesvc` on a temp dir. `TestUploadErrorHidesLink` checks that a fake token in the link never appears in returned errors.
 
 Config files live in `config/`. Only the `*-example.yaml` files are committed: when you add a config field, add it there too. The tracing endpoint `jaeger:4318` assumes a docker-compose network.
 

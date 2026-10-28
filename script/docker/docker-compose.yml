@@ -14,6 +14,19 @@ services:
       - jaeger
     restart: unless-stopped
 
+  bot:
+    build:
+      context: ../..
+      dockerfile: script/docker/Dockerfile.bot
+    environment:
+      BOT_TELEGRAM_TOKEN: ${BOT_TELEGRAM_TOKEN:?BOT_TELEGRAM_TOKEN is required}
+    volumes:
+      - ./config-bot.yaml:/etc/filestorage/config-bot.yaml:ro
+      - storage:/data/storage
+    depends_on:
+      - jaeger
+    restart: unless-stopped
+
   mcp:
     build:
       context: ../..
