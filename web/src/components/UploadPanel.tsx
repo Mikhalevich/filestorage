@@ -3,6 +3,7 @@ import { useRef, useState, type DragEvent } from 'react'
 import { ApiError, uploadFiles, type StoredFile } from '../api/client'
 
 type Props = {
+  user: string
   dir: string
   onUploaded: (stored: StoredFile[]) => void
 }
@@ -13,7 +14,7 @@ type Status =
   | { kind: 'done'; renamed: { from: string; to: string }[]; count: number }
   | { kind: 'error'; message: string }
 
-export function UploadPanel({ dir, onUploaded }: Props) {
+export function UploadPanel({ user, dir, onUploaded }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
@@ -26,7 +27,7 @@ export function UploadPanel({ dir, onUploaded }: Props) {
     setStatus({ kind: 'uploading', count: files.length })
 
     try {
-      const stored = await uploadFiles(dir, files)
+      const stored = await uploadFiles(user, dir, files)
 
       // the server answers in request order and renames files whose name is taken.
       const renamed = stored.flatMap((s, i) =>

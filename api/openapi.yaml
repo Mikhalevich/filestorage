@@ -8,36 +8,47 @@ info:
   description: |
     HTTP API of the `cmd/web` binary.
 
-    All file and directory paths are relative to the storage root (`storage.root_dir` config field)
-    and must not escape it.
+    Every route starts with the user that owns the files: `/files/{user}/...`. All file and directory paths are
+    relative to that user's directory `<storage.root_dir>/<user>` and must not escape it. The user's directory
+    is created on first access.
+
+    Requests need a bearer token whose `sub` claim equals the user (401 without a valid token, 403 for another user).
+    The `public` user is the exception: its files are available without a token.
 
     Errors are written as `text/plain; charset=utf-8` with the error message followed by a newline.
     Unexpected errors are reported as `500 Internal server error` without details.
 servers:
   - url: http://localhost:8080
 
-# authentication is enabled with the `auth.enabled` config field, without it requests need no token.
+# the token is required for every user except `public`, an empty requirement covers it.
 security:
   - bearerAuth: []
+  - {}
 
 paths:
-  /files/:
+  /files/{user}/:
+    parameters:
+      - $ref: "#/components/parameters/User"
     get:
       operationId: listRootFiles
-      summary: List files and subdirectories in the storage root
-      description: Same as `GET /files/{path}` for the storage root directory.
+      summary: List files and subdirectories in the user's root directory
+      description: Same as `GET /files/{user}/{path}` for the user's root directory.
       tags: [files]
       responses:
         "200":
           $ref: "#/components/responses/FileList"
+        "400":
+          $ref: "#/components/responses/InvalidUser"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
     post:
       operationId: uploadRootFiles
-      summary: Upload files into the storage root
-      description: Same as `POST /files/{path}` for the storage root directory.
+      summary: Upload files into the user's root directory
+      description: Same as `POST /files/{user}/{path}` for the user's root directory.
       tags: [files]
       requestBody:
         $ref: "#/components/requestBodies/Upload"
@@ -48,11 +59,14 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /files/{path}:
+  /files/{user}/{path}:
     parameters:
+      - $ref: "#/components/parameters/User"
       - $ref: "#/components/parameters/Path"
     get:
       operationId: listFiles
@@ -67,7 +81,7 @@ paths:
           $ref: "#/components/responses/FileList"
         "400":
           description: |
-            Invalid directory path. Possible messages: `invalid directory path`, `not a directory`.
+            Invalid directory path. Possible messages: `invalid user`, `invalid directory path`, `not a directory`.
           content:
             text/plain:
               schema:
@@ -82,6 +96,8 @@ paths:
               example: "directory not found\n"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
     post:
@@ -111,6 +127,8 @@ paths:
               example: "directory not found\n"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
     delete:
@@ -123,7 +141,7 @@ paths:
           description: File was deleted.
         "400":
           description: |
-            Invalid file path. Possible messages: `invalid file path`, `not a regular file`.
+            Invalid file path. Possible messages: `invalid user`, `invalid file path`, `not a regular file`.
           content:
             text/plain:
               schema:
@@ -138,11 +156,14 @@ paths:
               example: "file not found\n"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /dirs/{path}:
+  /dirs/{user}/{path}:
     parameters:
+      - $ref: "#/components/parameters/User"
       - $ref: "#/components/parameters/Path"
     post:
       operationId: createDirectory
@@ -156,7 +177,7 @@ paths:
           description: Directory was created.
         "400":
           description: |
-            Invalid directory path. Possible messages: `invalid directory path`, `not a directory`.
+            Invalid directory path. Possible messages: `invalid user`, `invalid directory path`, `not a directory`.
           content:
             text/plain:
               schema:
@@ -178,11 +199,14 @@ paths:
               example: "directory already exists\n"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /download/{path}:
+  /download/{user}/{path}:
     parameters:
+      - $ref: "#/components/parameters/User"
       - $ref: "#/components/parameters/Path"
     get:
       operationId: downloadFile
@@ -263,7 +287,7 @@ paths:
           description: File was not modified since the time given in the conditional headers.
         "400":
           description: |
-            Invalid file path. Possible messages: `invalid file path`, `not a regular file`.
+            Invalid file path. Possible messages: `invalid user`, `invalid file path`, `not a regular file`.
           content:
             text/plain:
               schema:
@@ -286,6 +310,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -297,12 +323,23 @@ components:
       bearerFormat: JWT
       description: Ed25519 (EdDSA) signed JWT with `sub`, `exp` and `iss` (when `auth.issuer` is configured) claims.
   parameters:
+    User:
+      name: user
+      in: path
+      required: true
+      description: |
+        User that owns the files, a single path segment. Must equal the token's `sub` claim,
+        except for `public` that needs no token. Invalid names (`.`, `..`, containing `\`) that pass
+        authorization are rejected with 400.
+      schema:
+        type: string
+      example: public
     Path:
       name: path
       in: path
       required: true
       description: |
-        Path relative to the storage root. May contain `/` separated segments (`sub/dir`).
+        Path relative to the user's directory. May contain `/` separated segments (`sub/dir`).
         Paths escaping the root (`..`) are rejected with 400.
       schema:
         type: string
@@ -385,14 +422,21 @@ components:
     BadRequest:
       description: |
         Invalid upload request. Possible messages: `multipart/form-data body expected`, `invalid multipart body`,
-        `no files in request`, `invalid directory path`, `not a directory`, `invalid file name`.
+        `no files in request`, `invalid user`, `invalid directory path`, `not a directory`, `invalid file name`.
       content:
         text/plain:
           schema:
             $ref: "#/components/schemas/Error"
           example: "no files in request\n"
+    InvalidUser:
+      description: "Invalid user name. Message: `invalid user`."
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example: "invalid user\n"
     Unauthorized:
-      description: Missing or invalid bearer token.
+      description: Missing or invalid bearer token. Never returned for the `public` user.
       headers:
         WWW-Authenticate:
           schema:
@@ -403,6 +447,13 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
           example: "invalid token\n"
+    Forbidden:
+      description: "The token's subject is not the user from the path. Message: `forbidden`."
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example: "forbidden\n"
     InternalServerError:
       description: Unexpected server error.
       content:
