@@ -1,5 +1,5 @@
 development:
   dialect: postgres
-  datasource: "host=postgres-service port=5432 user=user password=user dbname=user sslmode=disable"
+  datasource: "host=postgres port=5432 user=filestorage password=filestorage dbname=filestorage sslmode=disable"
   dir: script/db/migrations
   table: migrations

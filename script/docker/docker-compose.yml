@@ -70,6 +70,16 @@ services:
       retries: 15
     restart: unless-stopped
 
+  sql-migrate-user:
+    build:
+      context: ../../
+      dockerfile: script/docker/Dockerfile.sqlmigrate.user
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./dbconfig-user.yml:/app/config/dbconfig.yml:ro
+
   jaeger:
     image: jaegertracing/jaeger:2.11.0
     ports:
