@@ -15,4 +15,4 @@ auth:
   issuer: "filestorage"
   token_ttl: 1h
 postgres:
-  dsn: "postgres://filestorage:filestorage@postgres:5432/filestorage?sslmode=disable"
+  connection: "postgres://filestorage:filestorage@postgres:5432/filestorage?sslmode=disable"

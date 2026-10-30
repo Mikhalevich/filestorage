@@ -13,6 +13,11 @@ import (
 	"github.com/Mikhalevich/filestorage/internal/domain/model/user"
 )
 
+const (
+	// constraintUniqueName is the name Postgres gives to the UNIQUE constraint of users.name.
+	constraintUniqueName = "users_name_key"
+)
+
 type Driver interface {
 	IsConstraintError(err error, constraint string) bool
 }
@@ -60,7 +65,7 @@ func (p *PgUser) CreateUser(
 		model.ToDBUser(usr),
 	)
 	if err != nil {
-		if p.driver.IsConstraintError(err, "name unique error") {
+		if p.driver.IsConstraintError(err, constraintUniqueName) {
 			return perror.AlreadyExists("user already exists")
 		}
 
