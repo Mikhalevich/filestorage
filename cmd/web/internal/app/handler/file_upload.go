@@ -39,7 +39,7 @@ func (h *Handler) FileUpload(rspWriter http.ResponseWriter, req *http.Request) e
 			continue
 		}
 
-		info, err := h.fileSvc.SaveFile(res.FullPath(), part.FileName(), part)
+		info, err := h.fileSvc.SaveFile(res, part.FileName(), part)
 		if err != nil {
 			return serviceError("save file", res.FullPath(), err)
 		}

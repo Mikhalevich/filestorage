@@ -48,7 +48,8 @@ func TestStreamableHTTP(t *testing.T) {
 	t.Parallel()
 
 	rootDir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(rootDir, "a.txt"), []byte("aaa"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(rootDir, "public"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(rootDir, "public", "a.txt"), []byte("aaa"), 0o600))
 
 	tracer := &recordingTracer{}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -17,7 +18,7 @@ func (t *Tool) CreateDirectory(
 	_ *mcp.CallToolRequest,
 	input CreateDirectoryInput,
 ) (*mcp.CallToolResult, any, error) {
-	if err := t.fileSvc.CreateDirectory(input.Path); err != nil {
+	if err := t.fileSvc.CreateDirectory(resource.NewPublicResource(input.Path)); err != nil {
 		return nil, nil, fmt.Errorf("create directory %q: %w", input.Path, err)
 	}
 

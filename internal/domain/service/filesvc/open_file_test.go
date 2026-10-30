@@ -33,7 +33,7 @@ func TestOpenFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			info, content, err := svc.OpenFile(tc.path)
+			info, content, err := svc.OpenFile(atRoot(tc.path))
 			require.NoError(t, err)
 
 			t.Cleanup(func() { require.NoError(t, content.Close()) })
@@ -54,7 +54,7 @@ func TestOpenFileNotExist(t *testing.T) {
 
 	svc := filesvc.New(setupRoot(t))
 
-	_, _, err := svc.OpenFile("missing.txt")
+	_, _, err := svc.OpenFile(atRoot("missing.txt"))
 	require.ErrorIs(t, err, fs.ErrNotExist)
 	assert.True(t, perror.IsType(err, perror.TypeNotFound))
 }
@@ -65,7 +65,7 @@ func TestOpenFileNotRegular(t *testing.T) {
 	svc := filesvc.New(setupRoot(t))
 
 	for _, p := range []string{"", "/", ".", "sub", "sub/", "empty"} {
-		_, _, err := svc.OpenFile(p)
+		_, _, err := svc.OpenFile(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 }
@@ -76,7 +76,7 @@ func TestOpenFileEscapeRoot(t *testing.T) {
 	svc := filesvc.New(filepath.Join(setupRoot(t), "sub"))
 
 	for _, p := range []string{"../a.txt", "/../a.txt", "../sub/c.txt"} {
-		_, _, err := svc.OpenFile(p)
+		_, _, err := svc.OpenFile(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 }

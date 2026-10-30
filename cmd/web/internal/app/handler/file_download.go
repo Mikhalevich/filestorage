@@ -12,7 +12,7 @@ import (
 func (h *Handler) FileDownload(rspWriter http.ResponseWriter, req *http.Request) error {
 	res, _ := resource.FromContext(req.Context())
 
-	info, content, err := h.fileSvc.OpenFile(res.FullPath())
+	info, content, err := h.fileSvc.OpenFile(res)
 	if err != nil {
 		return serviceError("open file", res.FullPath(), err)
 	}

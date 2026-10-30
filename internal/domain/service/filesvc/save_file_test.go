@@ -46,7 +46,7 @@ func TestSaveFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			info, err := svc.SaveFile(tc.dirPath, tc.fileName, strings.NewReader("content"))
+			info, err := svc.SaveFile(atRoot(tc.dirPath), tc.fileName, strings.NewReader("content"))
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.fileName, info.Name)
@@ -81,7 +81,7 @@ func TestSaveFileRename(t *testing.T) {
 			for i, wantName := range tc.wantNames {
 				content := wantName + strings.Repeat("!", i)
 
-				info, err := svc.SaveFile("", tc.fileName, strings.NewReader(content))
+				info, err := svc.SaveFile(atRoot(""), tc.fileName, strings.NewReader(content))
 				require.NoError(t, err)
 
 				assert.Equal(t, wantName, info.Name)
@@ -96,7 +96,7 @@ func TestSaveFileDoesNotOverwrite(t *testing.T) {
 
 	rootDir := setupRoot(t)
 
-	_, err := filesvc.New(rootDir).SaveFile("", "a.txt", strings.NewReader("new"))
+	_, err := filesvc.New(rootDir).SaveFile(atRoot(""), "a.txt", strings.NewReader("new"))
 	require.NoError(t, err)
 
 	assert.Equal(t, "aaa", readFile(t, filepath.Join(rootDir, "a.txt")))
@@ -127,7 +127,7 @@ func TestSaveFileErrors(t *testing.T) {
 
 			svc := filesvc.New(filepath.Join(setupRoot(t), "sub"))
 
-			_, err := svc.SaveFile(tc.dirPath, tc.fileName, strings.NewReader("content"))
+			_, err := svc.SaveFile(atRoot(tc.dirPath), tc.fileName, strings.NewReader("content"))
 			assert.True(t, perror.IsType(err, tc.wantType), "error: %v", err)
 		})
 	}
@@ -144,7 +144,9 @@ func TestSaveFileReadError(t *testing.T) {
 
 	rootDir := setupRoot(t)
 
-	_, err := filesvc.New(rootDir).SaveFile("", "new.txt", io.MultiReader(strings.NewReader("partial"), failingReader{}))
+	content := io.MultiReader(strings.NewReader("partial"), failingReader{})
+
+	_, err := filesvc.New(rootDir).SaveFile(atRoot(""), "new.txt", content)
 	require.Error(t, err)
 	assert.False(t, perror.IsType(err, perror.TypeInvalidArgument))
 

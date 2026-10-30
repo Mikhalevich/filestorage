@@ -33,7 +33,7 @@ func toFileListResponse(entry file.File) fileListResponse {
 // FileList writes JSON list of files and subdirectories located in the directory taken from the request path value.
 func (h *Handler) FileList(rspWriter http.ResponseWriter, req *http.Request) error {
 	res, _ := resource.FromContext(req.Context())
-	files, err := h.fileSvc.FileList(res.FullPath())
+	files, err := h.fileSvc.FileList(res)
 	if err != nil {
 		return serviceError("file list", res.FullPath(), err)
 	}

@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 const (
@@ -16,9 +17,9 @@ const (
 
 // CreateDirectory creates dirPath directory relative to the service root.
 // Only the last path element is created: the parent directory must exist.
-func (s *Service) CreateDirectory(dirPath string) error {
+func (s *Service) CreateDirectory(res resource.Resource) error {
 	return s.withRootNoReturn(
-		dirPath,
+		res,
 		func(root *os.Root, fsPath string) error {
 			// root.Mkdir rejects paths escaping the root with an unexported error, so validate them upfront.
 			// "." is the root itself, it always exists and can't be created.

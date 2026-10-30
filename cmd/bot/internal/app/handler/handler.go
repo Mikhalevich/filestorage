@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 type FileService interface {
-	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
+	SaveFile(res resource.Resource, fileName string, content io.Reader) (file.File, error)
 }
 
 type Doer interface {

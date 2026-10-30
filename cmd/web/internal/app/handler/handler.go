@@ -7,14 +7,15 @@ import (
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 type FileService interface {
-	FileList(dirPath string) ([]file.File, error)
-	OpenFile(filePath string) (file.File, io.ReadSeekCloser, error)
-	SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error)
-	DeleteFile(filePath string) error
-	CreateDirectory(dirPath string) error
+	FileList(res resource.Resource) ([]file.File, error)
+	OpenFile(res resource.Resource) (file.File, io.ReadSeekCloser, error)
+	SaveFile(res resource.Resource, fileName string, content io.Reader) (file.File, error)
+	DeleteFile(res resource.Resource) error
+	CreateDirectory(res resource.Resource) error
 }
 
 type Handler struct {

@@ -33,7 +33,7 @@ func TestDeleteFile(t *testing.T) {
 
 			rootDir := setupRoot(t)
 
-			require.NoError(t, filesvc.New(rootDir).DeleteFile(tc.path))
+			require.NoError(t, filesvc.New(rootDir).DeleteFile(atRoot(tc.path)))
 
 			_, err := os.Stat(filepath.Join(rootDir, tc.wantGone))
 			require.ErrorIs(t, err, fs.ErrNotExist)
@@ -51,11 +51,11 @@ func TestDeleteFileNotExist(t *testing.T) {
 
 	svc := filesvc.New(setupRoot(t))
 
-	err := svc.DeleteFile("missing.txt")
+	err := svc.DeleteFile(atRoot("missing.txt"))
 	require.ErrorIs(t, err, fs.ErrNotExist)
 	assert.True(t, perror.IsType(err, perror.TypeNotFound))
 
-	err = svc.DeleteFile("a.txt/x")
+	err = svc.DeleteFile(atRoot("a.txt/x"))
 	assert.True(t, perror.IsType(err, perror.TypeNotFound), "%v", err)
 }
 
@@ -66,7 +66,7 @@ func TestDeleteFileNotRegular(t *testing.T) {
 	svc := filesvc.New(rootDir)
 
 	for _, p := range []string{"", "/", ".", "sub", "sub/", "empty"} {
-		err := svc.DeleteFile(p)
+		err := svc.DeleteFile(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 
@@ -83,7 +83,7 @@ func TestDeleteFileEscapeRoot(t *testing.T) {
 	svc := filesvc.New(filepath.Join(rootDir, "sub"))
 
 	for _, p := range []string{"../a.txt", "/../a.txt", "../sub/c.txt"} {
-		err := svc.DeleteFile(p)
+		err := svc.DeleteFile(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 

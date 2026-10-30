@@ -12,14 +12,15 @@ import (
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 // FileList returns regular files and subdirectories located in dirPath directory relative to the service root.
 // Other entries (symlinks, devices...) are skipped. Subdirectories come first sorted by name and have zero size,
 // files follow sorted by modification time (oldest first), ties are sorted by name.
-func (s *Service) FileList(dirPath string) ([]file.File, error) {
+func (s *Service) FileList(res resource.Resource) ([]file.File, error) {
 	files, err := s.withRoot(
-		dirPath,
+		res,
 		func(root *os.Root, fsPath string) ([]file.File, error) {
 			entries, err := fs.ReadDir(root.FS(), fsPath)
 			if err != nil {

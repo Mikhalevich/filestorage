@@ -20,6 +20,13 @@ type Resource struct {
 	Path string
 }
 
+func NewPublicResource(path string) Resource {
+	return Resource{
+		User: publicUser,
+		Path: path,
+	}
+}
+
 func (r Resource) IsPublic() bool {
 	return r.User == publicUser
 }

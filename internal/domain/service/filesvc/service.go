@@ -3,6 +3,9 @@ package filesvc
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 type Service struct {
@@ -19,10 +22,10 @@ func New(rootDir string) *Service {
 // withRoot opens the service root and calls rootFn with it and relativePath converted to fs path.
 // The root is closed when rootFn returns; files opened through it stay valid.
 func (s *Service) withRoot[T any](
-	relativePath string,
+	res resource.Resource,
 	rootFn func(root *os.Root, fsPath string) (T, error),
 ) (T, error) {
-	root, err := os.OpenRoot(s.rootDir)
+	root, err := os.OpenRoot(filepath.Join(s.rootDir, res.User))
 	if err != nil {
 		var zero T
 
@@ -31,17 +34,17 @@ func (s *Service) withRoot[T any](
 
 	defer root.Close()
 
-	return rootFn(root, toFSPath(relativePath))
+	return rootFn(root, toFSPath(res.Path))
 }
 
 // withRootNoReturn opens the service root and calls rootFn with it and relativePath converted to fs path.
 // The root is closed when rootFn returns; files opened through it stay valid.
 func (s *Service) withRootNoReturn(
-	relativePath string,
+	res resource.Resource,
 	rootFn func(root *os.Root, fsPath string) error,
 ) error {
 	if _, err := s.withRoot(
-		relativePath,
+		res,
 		func(root *os.Root, fsPath string) (struct{}, error) {
 			return struct{}{}, rootFn(root, fsPath)
 		},

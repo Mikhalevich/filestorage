@@ -8,13 +8,14 @@ import (
 	"syscall"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 // DeleteFile removes the regular file located at filePath relative to the service root.
 // Directories and other non-regular files are never removed.
-func (s *Service) DeleteFile(filePath string) error {
+func (s *Service) DeleteFile(res resource.Resource) error {
 	return s.withRootNoReturn(
-		filePath,
+		res,
 		func(root *os.Root, fsPath string) error {
 			// root.Lstat rejects paths escaping the root with an unexported error, so validate them upfront.
 			if !fs.ValidPath(fsPath) {

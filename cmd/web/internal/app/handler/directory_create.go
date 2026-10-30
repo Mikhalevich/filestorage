@@ -10,7 +10,7 @@ import (
 func (h *Handler) DirectoryCreate(rspWriter http.ResponseWriter, req *http.Request) error {
 	res, _ := resource.FromContext(req.Context())
 
-	if err := h.fileSvc.CreateDirectory(res.FullPath()); err != nil {
+	if err := h.fileSvc.CreateDirectory(res); err != nil {
 		return serviceError("create directory", res.FullPath(), err)
 	}
 

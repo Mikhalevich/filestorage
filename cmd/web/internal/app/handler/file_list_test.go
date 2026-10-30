@@ -56,14 +56,14 @@ func (r *trackedReader) Close() error {
 	return nil
 }
 
-func (f *fakeFileService) FileList(dirPath string) ([]file.File, error) {
-	f.gotPath = dirPath
+func (f *fakeFileService) FileList(res resource.Resource) ([]file.File, error) {
+	f.gotPath = res.FullPath()
 
 	return f.files, f.err
 }
 
-func (f *fakeFileService) OpenFile(filePath string) (file.File, io.ReadSeekCloser, error) {
-	f.gotPath = filePath
+func (f *fakeFileService) OpenFile(res resource.Resource) (file.File, io.ReadSeekCloser, error) {
+	f.gotPath = res.FullPath()
 
 	if f.err != nil {
 		return file.File{}, nil, f.err
@@ -72,8 +72,8 @@ func (f *fakeFileService) OpenFile(filePath string) (file.File, io.ReadSeekClose
 	return f.info, f.content, nil
 }
 
-func (f *fakeFileService) SaveFile(dirPath string, fileName string, content io.Reader) (file.File, error) {
-	f.gotPath = dirPath
+func (f *fakeFileService) SaveFile(res resource.Resource, fileName string, content io.Reader) (file.File, error) {
+	f.gotPath = res.FullPath()
 
 	if f.err != nil {
 		return file.File{}, f.err
@@ -94,14 +94,14 @@ func (f *fakeFileService) SaveFile(dirPath string, fileName string, content io.R
 	}, nil
 }
 
-func (f *fakeFileService) DeleteFile(filePath string) error {
-	f.gotPath = filePath
+func (f *fakeFileService) DeleteFile(res resource.Resource) error {
+	f.gotPath = res.FullPath()
 
 	return f.err
 }
 
-func (f *fakeFileService) CreateDirectory(dirPath string) error {
-	f.gotPath = dirPath
+func (f *fakeFileService) CreateDirectory(res resource.Resource) error {
+	f.gotPath = res.FullPath()
 
 	return f.err
 }

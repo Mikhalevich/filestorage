@@ -11,6 +11,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 type WriteFileInput struct {
@@ -37,7 +38,7 @@ func (t *Tool) WriteFile(
 		content = bytes.NewReader(data)
 	}
 
-	info, err := t.fileSvc.SaveFile(input.Dir, input.Name, content)
+	info, err := t.fileSvc.SaveFile(resource.NewPublicResource(input.Dir), input.Name, content)
 	if err != nil {
 		return nil, FileInfo{}, fmt.Errorf("save file %q in %q: %w", input.Name, input.Dir, err)
 	}

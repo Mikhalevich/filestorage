@@ -10,7 +10,7 @@ import (
 func (h *Handler) FileDelete(rspWriter http.ResponseWriter, req *http.Request) error {
 	res, _ := resource.FromContext(req.Context())
 
-	if err := h.fileSvc.DeleteFile(res.FullPath()); err != nil {
+	if err := h.fileSvc.DeleteFile(res); err != nil {
 		return serviceError("delete file", res.FullPath(), err)
 	}
 

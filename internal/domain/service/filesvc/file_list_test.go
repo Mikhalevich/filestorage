@@ -13,6 +13,7 @@ import (
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
 )
 
@@ -20,6 +21,11 @@ func writeFile(t *testing.T, name string, content string) {
 	t.Helper()
 
 	require.NoError(t, os.WriteFile(name, []byte(content), 0o600))
+}
+
+// atRoot addresses p relative to the storage root itself, a resource without a user.
+func atRoot(p string) resource.Resource {
+	return resource.Resource{Path: p}
 }
 
 func makeDir(t *testing.T, name string) {
@@ -84,7 +90,7 @@ func TestFileList(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			files, err := svc.FileList(tc.path)
+			files, err := svc.FileList(atRoot(tc.path))
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.want, entrySizes(t, files))
@@ -97,7 +103,7 @@ func TestFileListNotExist(t *testing.T) {
 
 	svc := filesvc.New(setupRoot(t))
 
-	_, err := svc.FileList("missing")
+	_, err := svc.FileList(atRoot("missing"))
 	require.ErrorIs(t, err, fs.ErrNotExist)
 	assert.True(t, perror.IsType(err, perror.TypeNotFound))
 }
@@ -107,7 +113,7 @@ func TestFileListNotDir(t *testing.T) {
 
 	svc := filesvc.New(setupRoot(t))
 
-	_, err := svc.FileList("a.txt")
+	_, err := svc.FileList(atRoot("a.txt"))
 	require.Error(t, err)
 	assert.True(t, perror.IsType(err, perror.TypeInvalidArgument))
 }
@@ -118,7 +124,7 @@ func TestFileListEscapeRoot(t *testing.T) {
 	svc := filesvc.New(filepath.Join(setupRoot(t), "sub"))
 
 	for _, p := range []string{"..", "../", "/../", "../sub"} {
-		_, err := svc.FileList(p)
+		_, err := svc.FileList(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 }
@@ -142,7 +148,7 @@ func TestFileListSortedByModTime(t *testing.T) {
 		require.NoError(t, os.Chtimes(fullName, modTime, modTime))
 	}
 
-	files, err := filesvc.New(rootDir).FileList("")
+	files, err := filesvc.New(rootDir).FileList(atRoot(""))
 	require.NoError(t, err)
 
 	got := make([]string, 0, len(files))
@@ -176,7 +182,7 @@ func TestFileListDirsFirst(t *testing.T) {
 		require.NoError(t, os.Chtimes(fullName, modTime, modTime))
 	}
 
-	files, err := filesvc.New(rootDir).FileList("")
+	files, err := filesvc.New(rootDir).FileList(atRoot(""))
 	require.NoError(t, err)
 
 	got := make([]string, 0, len(files))
@@ -194,8 +200,28 @@ func TestFileListSkipsSymlinks(t *testing.T) {
 	require.NoError(t, os.Symlink("a.txt", filepath.Join(rootDir, "link.txt")))
 	require.NoError(t, os.Symlink("sub", filepath.Join(rootDir, "link-dir")))
 
-	files, err := filesvc.New(rootDir).FileList("")
+	files, err := filesvc.New(rootDir).FileList(atRoot(""))
 	require.NoError(t, err)
 
 	assert.Equal(t, map[string]int64{"a.txt": 3, "b.txt": 5, "empty/": 0, "sub/": 0}, entrySizes(t, files))
+}
+
+func TestFileListUserRoot(t *testing.T) {
+	t.Parallel()
+
+	rootDir := t.TempDir()
+	makeDir(t, filepath.Join(rootDir, "alice"))
+	makeDir(t, filepath.Join(rootDir, "bob"))
+	writeFile(t, filepath.Join(rootDir, "alice", "a.txt"), "a")
+	writeFile(t, filepath.Join(rootDir, "bob", "b.txt"), "b")
+
+	svc := filesvc.New(rootDir)
+
+	files, err := svc.FileList(resource.Resource{User: "alice"})
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	assert.Equal(t, "a.txt", files[0].Name)
+
+	_, err = svc.FileList(resource.Resource{User: "alice", Path: "../bob"})
+	assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "error: %v", err)
 }
