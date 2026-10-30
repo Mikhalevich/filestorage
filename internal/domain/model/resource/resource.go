@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	publicUser = "public"
+	// PublicUser owns files available without a token, it can't be registered.
+	PublicUser = "public"
 )
 
 type contextResouce string
@@ -22,13 +23,13 @@ type Resource struct {
 
 func NewPublicResource(path string) Resource {
 	return Resource{
-		User: publicUser,
+		User: PublicUser,
 		Path: path,
 	}
 }
 
 func (r Resource) IsPublic() bool {
-	return r.User == publicUser
+	return r.User == PublicUser
 }
 
 func (r Resource) FullPath() string {

@@ -1,0 +1,5 @@
+development:
+  dialect: postgres
+  datasource: "host=postgres-service port=5432 user=user password=user dbname=user sslmode=disable"
+  dir: script/db/migrations
+  table: migrations

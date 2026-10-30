@@ -11,5 +11,8 @@ storage:
   root_dir: "./storage"
 auth:
   public_key: "some public key"
-  privage_key: "some private key"
+  private_key: "some private key"
   issuer: "filestorage"
+  token_ttl: 1h
+postgres:
+  dsn: "postgres://filestorage:filestorage@localhost:5432/filestorage?sslmode=disable"

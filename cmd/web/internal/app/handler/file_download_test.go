@@ -49,7 +49,7 @@ func callFileDownload(
 	rec := httptest.NewRecorder()
 
 	//nolint:wrapcheck
-	return rec, handler.New(svc).FileDownload(rec, req)
+	return rec, handler.New(svc, nil).FileDownload(rec, req)
 }
 
 func TestFileDownloadSuccess(t *testing.T) {

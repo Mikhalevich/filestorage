@@ -68,7 +68,7 @@ func callFileUpload(
 	rec := httptest.NewRecorder()
 
 	//nolint:wrapcheck
-	return rec, handler.New(svc).FileUpload(rec, req)
+	return rec, handler.New(svc, nil).FileUpload(rec, req)
 }
 
 func TestFileUploadSuccess(t *testing.T) {

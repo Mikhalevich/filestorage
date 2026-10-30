@@ -13,7 +13,8 @@ info:
     is created on first access.
 
     Requests need a bearer token whose `sub` claim equals the user (401 without a valid token, 403 for another user).
-    The `public` user is the exception: its files are available without a token.
+    The `public` user is the exception: its files are available without a token. Tokens are issued by
+    `POST /auth/register` and `POST /auth/login`, the token's subject is the username.
 
     Errors are written as `text/plain; charset=utf-8` with the error message followed by a newline.
     Unexpected errors are reported as `500 Internal server error` without details.
@@ -26,6 +27,66 @@ security:
   - {}
 
 paths:
+  /auth/register:
+    post:
+      operationId: register
+      summary: Register a user
+      description: Creates a user and returns a token issued for it. The user's directory is created on first access.
+      tags: [auth]
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/Credentials"
+      responses:
+        "201":
+          $ref: "#/components/responses/Token"
+        "400":
+          description: |
+            Invalid request. Possible messages: `invalid request body`, `username is reserved`,
+            `invalid username: ...`, `invalid password: must be 8-72 bytes long`.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "username is reserved\n"
+        "409":
+          description: "Username is taken. Message: `user already exists`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "user already exists\n"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /auth/login:
+    post:
+      operationId: login
+      summary: Log in
+      description: Checks the credentials and returns a token issued for the user.
+      tags: [auth]
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/Credentials"
+      responses:
+        "200":
+          $ref: "#/components/responses/Token"
+        "400":
+          description: "Malformed request. Message: `invalid request body`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "invalid request body\n"
+        "401":
+          description: "Unknown user or wrong password. Message: `invalid credentials`."
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example: "invalid credentials\n"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /files/{user}/:
     parameters:
       - $ref: "#/components/parameters/User"
@@ -346,6 +407,12 @@ components:
       example: sub/dir
 
   requestBodies:
+    Credentials:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Credentials"
     Upload:
       required: true
       content:
@@ -384,6 +451,12 @@ components:
         const: bytes
 
   responses:
+    Token:
+      description: Token issued for the user.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Token"
     FileList:
       description: Subdirectories and files in the directory, empty array if there are none.
       content:
@@ -463,6 +536,31 @@ components:
           example: "Internal server error\n"
 
   schemas:
+    Credentials:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{2,31}$"
+          description: |
+            3-32 characters of lowercase letters, digits, `_` and `-`, starting with a letter or digit.
+            `public` is reserved. Login doesn't validate the format.
+          example: alice
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: 8-72 bytes, checked on register only.
+          example: secret123
+    Token:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: "JWT to send as `Authorization: Bearer <token>`, valid for `auth.token_ttl`."
     File:
       type: object
       description: File or directory entry.
@@ -493,6 +591,8 @@ components:
       example: "file not found\n"
 
 tags:
+  - name: auth
+    description: User registration and login
   - name: files
     description: File storage operations
   - name: directories
