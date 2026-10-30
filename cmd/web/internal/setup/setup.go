@@ -37,20 +37,20 @@ func Start(
 		return fmt.Errorf("make auth service: %w", err)
 	}
 
-	dbConn, driver, cleanup, err := MakePGXConnection(ctx, cfg.Postgres)
+	dbConn, dbDriver, cleanup, err := MakePGXConnection(ctx, cfg.Postgres)
 	if err != nil {
 		return fmt.Errorf("make pgx connection: %w", err)
 	}
 	defer cleanup()
 
 	var (
-		sqlxDBConn          = sqlx.NewDb(dbConn, driver.Name())
+		sqlxDBConn          = sqlx.NewDb(dbConn, dbDriver.Name())
 		transactionProvider = transaction.New(transaction.NewSqlxDB(sqlxDBConn))
 		timeProvider        = timeprovider.New()
 
 		fileService = filesvc.New(cfg.Storage.RootDir)
 		userService = usersvc.New(
-			pguser.New(driver, transactionProvider),
+			pguser.New(dbDriver, transactionProvider),
 		)
 
 		registerUsecase = register.New(userService, authService, timeProvider)
@@ -88,8 +88,6 @@ func MakePGXConnection(
 	}
 
 	if err := dbConn.PingContext(ctx); err != nil {
-		dbConn.Close()
-
 		return nil, nil, noop, fmt.Errorf("ping: %w", errors.Join(err, dbConn.Close()))
 	}
 

@@ -206,7 +206,7 @@ export interface components {
             username: string;
             /**
              * Format: password
-             * @description 8-72 bytes, checked on register only.
+             * @description 1-72 bytes, checked on register only (bcrypt ignores bytes after the 72nd).
              * @example secret123
              */
             password: string;
@@ -422,8 +422,9 @@ export interface operations {
         responses: {
             201: components["responses"]["Token"];
             /**
-             * @description Invalid request. Possible messages: `invalid request body`, `username is reserved`,
-             *     `invalid username: ...`, `invalid password: must be 8-72 bytes long`.
+             * @description Invalid request. A body that isn't valid JSON (or is over 4 KiB) gets `invalid credentials`.
+             *     Other messages: `username is reserved`, `invalid username: ...`,
+             *     `invalid password: must be 1-72 bytes long`.
              */
             400: {
                 headers: {
@@ -457,13 +458,16 @@ export interface operations {
         requestBody: components["requestBodies"]["Credentials"];
         responses: {
             200: components["responses"]["Token"];
-            /** @description Malformed request. Message: `invalid request body`. */
+            /**
+             * @description Body isn't valid JSON or is over 4 KiB. Message: `invalid credentials`, the same text as the 401
+             *     response, tell them apart by the status.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /** @example invalid request body */
+                    /** @example invalid credentials */
                     "text/plain": components["schemas"]["Error"];
                 };
             };

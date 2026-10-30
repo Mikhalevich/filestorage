@@ -41,8 +41,9 @@ paths:
           $ref: "#/components/responses/Token"
         "400":
           description: |
-            Invalid request. Possible messages: `invalid request body`, `username is reserved`,
-            `invalid username: ...`, `invalid password: must be 8-72 bytes long`.
+            Invalid request. A body that isn't valid JSON (or is over 4 KiB) gets `invalid credentials`.
+            Other messages: `username is reserved`, `invalid username: ...`,
+            `invalid password: must be 1-72 bytes long`.
           content:
             text/plain:
               schema:
@@ -71,12 +72,14 @@ paths:
         "200":
           $ref: "#/components/responses/Token"
         "400":
-          description: "Malformed request. Message: `invalid request body`."
+          description: |
+            Body isn't valid JSON or is over 4 KiB. Message: `invalid credentials`, the same text as the 401
+            response, tell them apart by the status.
           content:
             text/plain:
               schema:
                 $ref: "#/components/schemas/Error"
-              example: "invalid request body\n"
+              example: "invalid credentials\n"
         "401":
           description: "Unknown user or wrong password. Message: `invalid credentials`."
           content:
@@ -550,9 +553,9 @@ components:
         password:
           type: string
           format: password
-          minLength: 8
+          minLength: 1
           maxLength: 72
-          description: 8-72 bytes, checked on register only.
+          description: 1-72 bytes, checked on register only (bcrypt ignores bytes after the 72nd).
           example: secret123
     Token:
       type: object
