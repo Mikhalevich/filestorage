@@ -13,6 +13,7 @@ import (
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 const (
@@ -102,7 +103,7 @@ func (h *Handler) uploadFile(
 		return file.File{}, fmt.Errorf("unexpected http status: %s", rsp.Status)
 	}
 
-	stored, err := h.fileSvc.SaveFile(dir, fileName, rsp.Body)
+	stored, err := h.fileSvc.SaveFile(resource.NewPublicResource(dir), fileName, rsp.Body)
 	if err != nil {
 		return file.File{}, fmt.Errorf("save file: %w", err)
 	}

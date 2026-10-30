@@ -10,13 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
-	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
 )
 
 func TestOpenFile(t *testing.T) {
 	t.Parallel()
 
-	svc := filesvc.New(setupRoot(t))
+	svc := newService(t, setupRoot(t))
 
 	tests := []struct {
 		name        string
@@ -33,7 +32,7 @@ func TestOpenFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			info, content, err := svc.OpenFile(tc.path)
+			info, content, err := svc.OpenFile(atRoot(tc.path))
 			require.NoError(t, err)
 
 			t.Cleanup(func() { require.NoError(t, content.Close()) })
@@ -52,9 +51,9 @@ func TestOpenFile(t *testing.T) {
 func TestOpenFileNotExist(t *testing.T) {
 	t.Parallel()
 
-	svc := filesvc.New(setupRoot(t))
+	svc := newService(t, setupRoot(t))
 
-	_, _, err := svc.OpenFile("missing.txt")
+	_, _, err := svc.OpenFile(atRoot("missing.txt"))
 	require.ErrorIs(t, err, fs.ErrNotExist)
 	assert.True(t, perror.IsType(err, perror.TypeNotFound))
 }
@@ -62,10 +61,10 @@ func TestOpenFileNotExist(t *testing.T) {
 func TestOpenFileNotRegular(t *testing.T) {
 	t.Parallel()
 
-	svc := filesvc.New(setupRoot(t))
+	svc := newService(t, setupRoot(t))
 
 	for _, p := range []string{"", "/", ".", "sub", "sub/", "empty"} {
-		_, _, err := svc.OpenFile(p)
+		_, _, err := svc.OpenFile(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 }
@@ -73,10 +72,10 @@ func TestOpenFileNotRegular(t *testing.T) {
 func TestOpenFileEscapeRoot(t *testing.T) {
 	t.Parallel()
 
-	svc := filesvc.New(filepath.Join(setupRoot(t), "sub"))
+	svc := newService(t, filepath.Join(setupRoot(t), "sub"))
 
 	for _, p := range []string{"../a.txt", "/../a.txt", "../sub/c.txt"} {
-		_, _, err := svc.OpenFile(p)
+		_, _, err := svc.OpenFile(atRoot(p))
 		assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "path %q: %v", p, err)
 	}
 }

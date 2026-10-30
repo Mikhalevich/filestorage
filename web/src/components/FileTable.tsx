@@ -2,6 +2,7 @@ import { downloadURL, type StoredFile } from '../api/client'
 import { formatSize, formatTime } from '../format'
 
 type Props = {
+  user: string
   dir: string
   files: StoredFile[]
   highlighted: ReadonlySet<string>
@@ -11,7 +12,7 @@ type Props = {
 }
 
 // FileTable keeps the server order: directories by name, then files oldest first, ties by name.
-export function FileTable({ dir, files, highlighted, deleting, onDelete, onOpenDir }: Props) {
+export function FileTable({ user, dir, files, highlighted, deleting, onDelete, onOpenDir }: Props) {
   if (files.length === 0) {
     return <p className="empty">This directory is empty.</p>
   }
@@ -49,7 +50,7 @@ export function FileTable({ dir, files, highlighted, deleting, onDelete, onOpenD
             ) : (
               <tr key={f.name} className={highlighted.has(f.name) ? 'row-new' : undefined}>
                 <td className="name">
-                  <a href={downloadURL(dir, f.name)} download={f.name} title={`Download ${f.name}`}>
+                  <a href={downloadURL(user, dir, f.name)} download={f.name} title={`Download ${f.name}`}>
                     {f.name}
                   </a>
                 </td>

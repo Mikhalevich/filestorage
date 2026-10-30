@@ -33,11 +33,15 @@ func setupRoot(t *testing.T) string {
 }
 
 // connect starts mcp server with file storage tools over rootDir and returns connected client session.
+// Tools work with the public user's directory, so rootDir is linked as "public" into a new storage root.
 func connect(t *testing.T, rootDir string) *mcp.ClientSession {
 	t.Helper()
 
+	storageDir := t.TempDir()
+	require.NoError(t, os.Symlink(rootDir, filepath.Join(storageDir, "public")))
+
 	server := mcp.NewServer(&mcp.Implementation{Name: "test-server"}, nil)
-	tool.New(filesvc.New(rootDir), testMaxReadBytes).Register(server)
+	tool.New(filesvc.New(storageDir), testMaxReadBytes).Register(server)
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 

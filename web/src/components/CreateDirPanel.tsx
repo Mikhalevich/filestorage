@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { ApiError, createDirectory, normalizeDir } from '../api/client'
 
 type Props = {
+  user: string
   dir: string
   onOpen: (dir: string) => void
   onCreated: () => void
@@ -15,7 +16,7 @@ type Status =
   | { kind: 'error'; message: string }
 
 // CreateDirPanel creates a subdirectory of dir and offers a link to open it.
-export function CreateDirPanel({ dir, onOpen, onCreated }: Props) {
+export function CreateDirPanel({ user, dir, onOpen, onCreated }: Props) {
   const [name, setName] = useState('')
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
 
@@ -30,7 +31,7 @@ export function CreateDirPanel({ dir, onOpen, onCreated }: Props) {
     setStatus({ kind: 'creating' })
 
     try {
-      await createDirectory(dir, trimmed)
+      await createDirectory(user, dir, trimmed)
       setStatus({ kind: 'done', path: normalizeDir(`${dir}/${trimmed}`) })
       setName('')
       onCreated()

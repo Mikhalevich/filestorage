@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -21,7 +22,7 @@ func (t *Tool) ListFiles(
 	_ *mcp.CallToolRequest,
 	input ListFilesInput,
 ) (*mcp.CallToolResult, ListFilesOutput, error) {
-	files, err := t.fileSvc.FileList(input.Path)
+	files, err := t.fileSvc.FileList(resource.NewPublicResource(input.Path))
 	if err != nil {
 		return nil, ListFilesOutput{}, fmt.Errorf("file list %q: %w", input.Path, err)
 	}

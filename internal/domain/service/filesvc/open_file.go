@@ -9,6 +9,7 @@ import (
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 type openFileResult struct {
@@ -18,9 +19,9 @@ type openFileResult struct {
 
 // OpenFile opens the regular file located at filePath relative to the service root.
 // The caller must close the returned reader.
-func (s *Service) OpenFile(filePath string) (file.File, io.ReadSeekCloser, error) {
+func (s *Service) OpenFile(res resource.Resource) (file.File, io.ReadSeekCloser, error) {
 	result, err := s.withRoot(
-		filePath,
+		res,
 		func(root *os.Root, fsPath string) (openFileResult, error) {
 			// root.Open rejects paths escaping the root with an unexported error, so validate them upfront.
 			if !fs.ValidPath(fsPath) {

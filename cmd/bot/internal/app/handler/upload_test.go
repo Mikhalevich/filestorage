@@ -45,7 +45,7 @@ func (f *fakeOperations) GetDownloadLink(_ context.Context, fileID string) (stri
 	return f.serverURL + "/" + fileID, nil
 }
 
-// setup returns handler over a temp storage root, fake operations and the root path.
+// setup returns handler over a temp storage root, fake operations and the public user's directory path.
 func setup(t *testing.T) (*handler.Handler, *fakeOperations, string) {
 	t.Helper()
 
@@ -63,9 +63,13 @@ func setup(t *testing.T) (*handler.Handler, *fakeOperations, string) {
 
 	rootDir := t.TempDir()
 
+	// files are saved into the public user's directory.
+	publicDir := filepath.Join(rootDir, "public")
+	require.NoError(t, os.Mkdir(publicDir, 0o700))
+
 	return handler.New(filesvc.New(rootDir), srv.Client()),
 		&fakeOperations{serverURL: srv.URL},
-		rootDir
+		publicDir
 }
 
 func documentMessage(fileID, fileName string) tgbot.Message {

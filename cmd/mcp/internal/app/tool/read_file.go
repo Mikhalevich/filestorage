@@ -11,6 +11,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 const (
@@ -28,7 +29,7 @@ func (t *Tool) ReadFile(
 	_ *mcp.CallToolRequest,
 	input ReadFileInput,
 ) (*mcp.CallToolResult, any, error) {
-	info, content, err := t.fileSvc.OpenFile(input.Path)
+	info, content, err := t.fileSvc.OpenFile(resource.NewPublicResource(input.Path))
 	if err != nil {
 		return nil, nil, fmt.Errorf("open file %q: %w", input.Path, err)
 	}

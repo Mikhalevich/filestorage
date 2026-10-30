@@ -3,20 +3,18 @@ package handler
 import (
 	"fmt"
 	"net/http"
-)
 
-const (
-	PathValueFilePath = "path"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 // FileDownload streams the file taken from the request path value as an attachment.
 // Content type, range and conditional requests are handled by http.ServeContent.
 func (h *Handler) FileDownload(rspWriter http.ResponseWriter, req *http.Request) error {
-	filePath := req.PathValue(PathValueFilePath)
+	res, _ := resource.FromContext(req.Context())
 
-	info, content, err := h.fileSvc.OpenFile(filePath)
+	info, content, err := h.fileSvc.OpenFile(res)
 	if err != nil {
-		return serviceError("open file", filePath, err)
+		return serviceError("open file", res.FullPath(), err)
 	}
 
 	defer content.Close()

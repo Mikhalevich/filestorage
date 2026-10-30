@@ -38,8 +38,9 @@ func callFileDownload(
 ) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/download/"+url.PathEscape(filePath), nil)
-	req.SetPathValue(handler.PathValueFilePath, filePath)
+	target := "/download/" + testUser + "/" + url.PathEscape(filePath)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil)
+	req = withResource(req, filePath)
 
 	for k, v := range headers {
 		req.Header.Set(k, v)
@@ -59,7 +60,7 @@ func TestFileDownloadSuccess(t *testing.T) {
 	rec, err := callFileDownload(t, svc, "sub/a.txt", nil)
 	require.NoError(t, err)
 
-	assert.Equal(t, "sub/a.txt", svc.gotPath)
+	assert.Equal(t, testUser+"/sub/a.txt", svc.gotPath)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "hello", rec.Body.String())
 	assert.Equal(t, "attachment; filename=\"a.txt\"", rec.Header().Get("Content-Disposition"))

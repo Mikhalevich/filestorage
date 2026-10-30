@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 const (
@@ -30,12 +31,11 @@ func toFileListResponse(entry file.File) fileListResponse {
 }
 
 // FileList writes JSON list of files and subdirectories located in the directory taken from the request path value.
-func (h *Handler) FileList(rspWriter http.ResponseWriter, r *http.Request) error {
-	dirPath := r.PathValue(PathValueDirPath)
-
-	files, err := h.fileSvc.FileList(dirPath)
+func (h *Handler) FileList(rspWriter http.ResponseWriter, req *http.Request) error {
+	res, _ := resource.FromContext(req.Context())
+	files, err := h.fileSvc.FileList(res)
 	if err != nil {
-		return serviceError("file list", dirPath, err)
+		return serviceError("file list", res.FullPath(), err)
 	}
 
 	fileList := make([]fileListResponse, 0, len(files))

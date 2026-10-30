@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/middleware"
-	"github.com/Mikhalevich/filestorage/internal/domain/model/auth"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/Mikhalevich/filestorage/internal/domain/service/authsvc"
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
 )
@@ -48,14 +48,17 @@ func TestAuth(t *testing.T) {
 
 	tests := []struct {
 		name     string
+		user     string
 		header   string
 		wantCode int
 	}{
-		{name: "valid", header: "Bearer " + token, wantCode: http.StatusOK},
-		{name: "valid lowercase scheme", header: "bearer " + token, wantCode: http.StatusOK},
-		{name: "missing header", header: "", wantCode: http.StatusUnauthorized},
-		{name: "basic scheme", header: "Basic YWxpY2U6c2VjcmV0", wantCode: http.StatusUnauthorized},
-		{name: "invalid token", header: "Bearer " + token + "x", wantCode: http.StatusUnauthorized},
+		{name: "valid", user: "alice", header: "Bearer " + token, wantCode: http.StatusOK},
+		{name: "valid lowercase scheme", user: "alice", header: "bearer " + token, wantCode: http.StatusOK},
+		{name: "public without token", user: "public", header: "", wantCode: http.StatusOK},
+		{name: "missing header", user: "alice", header: "", wantCode: http.StatusUnauthorized},
+		{name: "basic scheme", user: "alice", header: "Basic YWxpY2U6c2VjcmV0", wantCode: http.StatusUnauthorized},
+		{name: "invalid token", user: "alice", header: "Bearer " + token + "x", wantCode: http.StatusUnauthorized},
+		{name: "other user", user: "bob", header: "Bearer " + token, wantCode: http.StatusForbidden},
 	}
 
 	for _, tc := range tests {
@@ -63,15 +66,14 @@ func TestAuth(t *testing.T) {
 			t.Parallel()
 
 			var (
-				gotSubject string
-				log        = newFakeLogger()
-				rec        = httptest.NewRecorder()
-				req        = httptest.NewRequestWithContext(
+				called bool
+				log    = newFakeLogger()
+				rec    = httptest.NewRecorder()
+				ctx    = resource.WithContext(
 					logger.WithLogger(t.Context(), log),
-					http.MethodGet,
-					"/files/",
-					nil,
+					resource.Resource{User: tc.user},
 				)
+				req = httptest.NewRequestWithContext(ctx, http.MethodGet, "/files/"+tc.user+"/", nil)
 			)
 
 			if tc.header != "" {
@@ -79,12 +81,7 @@ func TestAuth(t *testing.T) {
 			}
 
 			handler := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-				claims, ok := auth.ClaimsFromContext(r.Context())
-				if !ok {
-					t.Error("claims missing in context")
-				}
-
-				gotSubject = claims.Subject
+				called = true
 
 				logger.FromContext(r.Context()).Info("inside handler")
 			})
@@ -95,21 +92,43 @@ func TestAuth(t *testing.T) {
 				t.Fatalf("response code = %d, want %d", rec.Code, tc.wantCode)
 			}
 
-			if tc.wantCode != http.StatusOK {
+			if called != (tc.wantCode == http.StatusOK) {
+				t.Fatalf("handler called = %t, want %t", called, tc.wantCode == http.StatusOK)
+			}
+
+			switch {
+			case tc.wantCode == http.StatusUnauthorized:
 				if rec.Header().Get("WWW-Authenticate") != "Bearer" {
 					t.Errorf("WWW-Authenticate = %q, want Bearer", rec.Header().Get("WWW-Authenticate"))
 				}
-
-				return
-			}
-
-			if gotSubject != "alice" {
-				t.Errorf("subject = %q, want alice", gotSubject)
-			}
-
-			if len(*log.entries) != 1 || (*log.entries)[0].fields["subject"] != "alice" {
-				t.Errorf("handler logger missing subject field: %v", *log.entries)
+			case tc.wantCode == http.StatusOK && tc.header != "":
+				if len(*log.entries) != 1 || (*log.entries)[0].fields["subject"] != "alice" {
+					t.Errorf("handler logger missing subject field: %v", *log.entries)
+				}
 			}
 		})
+	}
+}
+
+func TestAuthMissingResource(t *testing.T) {
+	t.Parallel()
+
+	var (
+		called  bool
+		rec     = httptest.NewRecorder()
+		req     = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/files/", nil)
+		handler = http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+			called = true
+		})
+	)
+
+	middleware.Auth(nil)(handler).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("response code = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+
+	if called {
+		t.Error("handler called without resource")
 	}
 }

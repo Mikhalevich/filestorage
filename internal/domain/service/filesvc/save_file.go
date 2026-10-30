@@ -12,6 +12,7 @@ import (
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 const (
@@ -23,12 +24,12 @@ const (
 // If fileName is already taken, a numeric suffix is added before the extension (a.txt -> a_1.txt).
 // Returns info about the stored file, its name may differ from fileName.
 func (s *Service) SaveFile(
-	dirPath string,
+	res resource.Resource,
 	fileName string,
 	content io.Reader,
 ) (file.File, error) {
 	info, err := s.withRoot(
-		dirPath,
+		res,
 		func(root *os.Root, dir string) (os.FileInfo, error) {
 			// root.OpenFile rejects paths escaping the root with an unexported error, so validate them upfront.
 			if !fs.ValidPath(dir) {

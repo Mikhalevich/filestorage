@@ -19,8 +19,9 @@ import (
 func callFileDelete(t *testing.T, svc *fakeFileService, filePath string) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/files/"+url.PathEscape(filePath), nil)
-	req.SetPathValue(handler.PathValueFilePath, filePath)
+	target := "/files/" + testUser + "/" + url.PathEscape(filePath)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, target, nil)
+	req = withResource(req, filePath)
 
 	rec := httptest.NewRecorder()
 
@@ -36,7 +37,7 @@ func TestFileDeleteSuccess(t *testing.T) {
 	rec, err := callFileDelete(t, svc, "sub/a.txt")
 	require.NoError(t, err)
 
-	assert.Equal(t, "sub/a.txt", svc.gotPath)
+	assert.Equal(t, testUser+"/sub/a.txt", svc.gotPath)
 	assert.Equal(t, http.StatusNoContent, rec.Code)
 	assert.Empty(t, rec.Body.String())
 }

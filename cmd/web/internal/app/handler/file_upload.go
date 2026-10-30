@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
 
 // FileUpload stores files from multipart/form-data request body in the directory taken from the request path value.
@@ -15,7 +16,7 @@ import (
 // previously stored files are kept. Writes JSON list of stored files, their names may differ
 // from the requested ones when those are already taken.
 func (h *Handler) FileUpload(rspWriter http.ResponseWriter, req *http.Request) error {
-	dirPath := req.PathValue(PathValueDirPath)
+	res, _ := resource.FromContext(req.Context())
 
 	reader, err := req.MultipartReader()
 	if err != nil {
@@ -38,9 +39,9 @@ func (h *Handler) FileUpload(rspWriter http.ResponseWriter, req *http.Request) e
 			continue
 		}
 
-		info, err := h.fileSvc.SaveFile(dirPath, part.FileName(), part)
+		info, err := h.fileSvc.SaveFile(res, part.FileName(), part)
 		if err != nil {
-			return serviceError("save file", dirPath, err)
+			return serviceError("save file", res.FullPath(), err)
 		}
 
 		stored = append(stored, toFileListResponse(info))

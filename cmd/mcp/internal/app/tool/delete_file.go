@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -17,7 +18,7 @@ func (t *Tool) DeleteFile(
 	_ *mcp.CallToolRequest,
 	input DeleteFileInput,
 ) (*mcp.CallToolResult, any, error) {
-	if err := t.fileSvc.DeleteFile(input.Path); err != nil {
+	if err := t.fileSvc.DeleteFile(resource.NewPublicResource(input.Path)); err != nil {
 		return nil, nil, fmt.Errorf("delete file %q: %w", input.Path, err)
 	}
 

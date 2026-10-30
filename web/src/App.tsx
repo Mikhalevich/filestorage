@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { ApiError, deleteFile, listFiles, normalizeDir, type StoredFile } from './api/client'
+import { ApiError, deleteFile, listFiles, normalizeDir, PUBLIC_USER, type StoredFile } from './api/client'
 import { FileTable } from './components/FileTable'
 import { PathBar } from './components/PathBar'
 import { CreateDirPanel } from './components/CreateDirPanel'
@@ -11,6 +11,9 @@ type ListResult = { kind: 'ok'; files: StoredFile[] } | { kind: 'error'; status?
 
 // results are tagged with the request they answer, a result for another request means loading.
 type Tagged<T> = { dir: string; reload: number; value: T }
+
+// the UI sends no token yet, so it works with the public user's files only.
+const user = PUBLIC_USER
 
 const noHighlight: ReadonlySet<string> = new Set()
 
@@ -29,7 +32,7 @@ export default function App() {
     const controller = new AbortController()
     const tag = (value: ListResult) => setResult({ dir, reload, value })
 
-    listFiles(dir, controller.signal)
+    listFiles(user, dir, controller.signal)
       .then((files) => tag({ kind: 'ok', files }))
       .catch((err: unknown) => {
         if (controller.signal.aborted) {
@@ -65,7 +68,7 @@ export default function App() {
       setDeleteError(undefined)
 
       try {
-        await deleteFile(dir, name)
+        await deleteFile(user, dir, name)
         setReload((r) => r + 1)
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
@@ -109,8 +112,8 @@ export default function App() {
       <PathBar dir={dir} onNavigate={navigate} />
 
       <main>
-        <UploadPanel key={dir} dir={dir} onUploaded={onUploaded} />
-        <CreateDirPanel key={`mkdir:${dir}`} dir={dir} onOpen={navigate} onCreated={() => setReload((r) => r + 1)} />
+        <UploadPanel key={dir} user={user} dir={dir} onUploaded={onUploaded} />
+        <CreateDirPanel key={`mkdir:${dir}`} user={user} dir={dir} onOpen={navigate} onCreated={() => setReload((r) => r + 1)} />
 
         <section aria-label="Files" aria-busy={loading}>
           {shown === undefined && <p className="muted">Loading…</p>}
@@ -131,6 +134,7 @@ export default function App() {
           )}
           {shown?.kind === 'ok' && (
             <FileTable
+              user={user}
               dir={dir}
               files={shown.files}
               highlighted={highlighted}
