@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
-	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
 )
 
 func TestDeleteFile(t *testing.T) {
@@ -33,7 +32,7 @@ func TestDeleteFile(t *testing.T) {
 
 			rootDir := setupRoot(t)
 
-			require.NoError(t, filesvc.New(rootDir).DeleteFile(atRoot(tc.path)))
+			require.NoError(t, newService(t, rootDir).DeleteFile(atRoot(tc.path)))
 
 			_, err := os.Stat(filepath.Join(rootDir, tc.wantGone))
 			require.ErrorIs(t, err, fs.ErrNotExist)
@@ -49,7 +48,7 @@ func TestDeleteFile(t *testing.T) {
 func TestDeleteFileNotExist(t *testing.T) {
 	t.Parallel()
 
-	svc := filesvc.New(setupRoot(t))
+	svc := newService(t, setupRoot(t))
 
 	err := svc.DeleteFile(atRoot("missing.txt"))
 	require.ErrorIs(t, err, fs.ErrNotExist)
@@ -63,7 +62,7 @@ func TestDeleteFileNotRegular(t *testing.T) {
 	t.Parallel()
 
 	rootDir := setupRoot(t)
-	svc := filesvc.New(rootDir)
+	svc := newService(t, rootDir)
 
 	for _, p := range []string{"", "/", ".", "sub", "sub/", "empty"} {
 		err := svc.DeleteFile(atRoot(p))
@@ -80,7 +79,7 @@ func TestDeleteFileEscapeRoot(t *testing.T) {
 	t.Parallel()
 
 	rootDir := setupRoot(t)
-	svc := filesvc.New(filepath.Join(rootDir, "sub"))
+	svc := newService(t, filepath.Join(rootDir, "sub"))
 
 	for _, p := range []string{"../a.txt", "/../a.txt", "../sub/c.txt"} {
 		err := svc.DeleteFile(atRoot(p))

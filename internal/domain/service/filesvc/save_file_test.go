@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
-	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
 )
 
 func readFile(t *testing.T, name string) string {
@@ -28,7 +27,7 @@ func TestSaveFile(t *testing.T) {
 	t.Parallel()
 
 	rootDir := setupRoot(t)
-	svc := filesvc.New(rootDir)
+	svc := newService(t, rootDir)
 
 	tests := []struct {
 		name     string
@@ -76,7 +75,7 @@ func TestSaveFileRename(t *testing.T) {
 			t.Parallel()
 
 			rootDir := setupRoot(t)
-			svc := filesvc.New(rootDir)
+			svc := newService(t, rootDir)
 
 			for i, wantName := range tc.wantNames {
 				content := wantName + strings.Repeat("!", i)
@@ -96,7 +95,7 @@ func TestSaveFileDoesNotOverwrite(t *testing.T) {
 
 	rootDir := setupRoot(t)
 
-	_, err := filesvc.New(rootDir).SaveFile(atRoot(""), "a.txt", strings.NewReader("new"))
+	_, err := newService(t, rootDir).SaveFile(atRoot(""), "a.txt", strings.NewReader("new"))
 	require.NoError(t, err)
 
 	assert.Equal(t, "aaa", readFile(t, filepath.Join(rootDir, "a.txt")))
@@ -125,7 +124,7 @@ func TestSaveFileErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := filesvc.New(filepath.Join(setupRoot(t), "sub"))
+			svc := newService(t, filepath.Join(setupRoot(t), "sub"))
 
 			_, err := svc.SaveFile(atRoot(tc.dirPath), tc.fileName, strings.NewReader("content"))
 			assert.True(t, perror.IsType(err, tc.wantType), "error: %v", err)
@@ -146,7 +145,7 @@ func TestSaveFileReadError(t *testing.T) {
 
 	content := io.MultiReader(strings.NewReader("partial"), failingReader{})
 
-	_, err := filesvc.New(rootDir).SaveFile(atRoot(""), "new.txt", content)
+	_, err := newService(t, rootDir).SaveFile(atRoot(""), "new.txt", content)
 	require.Error(t, err)
 	assert.False(t, perror.IsType(err, perror.TypeInvalidArgument))
 
