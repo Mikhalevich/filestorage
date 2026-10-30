@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -70,23 +71,29 @@ func Start(
 	return nil
 }
 
-func MakePGXConnection(ctx context.Context, cfg config.Postgres) (*sql.DB, *driver.Pgx, func(), error) {
-	if cfg.Connection == "" {
-		return nil, nil, func() {}, nil
-	}
+// MakePGXConnection opens and pings the database. The returned cleanup closes the connection,
+// it is a no-op when an error is returned.
+func MakePGXConnection(
+	ctx context.Context,
+	cfg config.Postgres,
+) (*sql.DB, *driver.Pgx, func(), error) {
+	var (
+		noop      = func() {}
+		pgxDriver = driver.NewPgx()
+	)
 
-	driver := driver.NewPgx()
-
-	dbConn, err := otelsql.Open(driver.Name(), cfg.Connection)
+	dbConn, err := otelsql.Open(pgxDriver.Name(), cfg.Connection)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("open database: %w", err)
+		return nil, nil, noop, fmt.Errorf("open database: %w", err)
 	}
 
 	if err := dbConn.PingContext(ctx); err != nil {
-		return nil, nil, nil, fmt.Errorf("ping: %w", err)
+		dbConn.Close()
+
+		return nil, nil, noop, fmt.Errorf("ping: %w", errors.Join(err, dbConn.Close()))
 	}
 
-	return dbConn, driver, func() {
+	return dbConn, pgxDriver, func() {
 		dbConn.Close()
 	}, nil
 }

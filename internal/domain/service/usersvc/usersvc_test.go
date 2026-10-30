@@ -99,7 +99,7 @@ func TestCreateBoundaryLengths(t *testing.T) {
 		{name: "min name", username: "abc", password: "secret123"},
 		{name: "max name", username: strings.Repeat("a", 32), password: "secret123"},
 		{name: "name with dash and underscore", username: "a-b_c", password: "secret123"},
-		{name: "min password", username: "alice", password: "a"},
+		{name: "min password", username: "alice", password: strings.Repeat("a", 8)},
 		{name: "max password", username: "alice", password: strings.Repeat("a", 72)},
 	}
 
