@@ -9,3 +9,9 @@ http_server:
   shutdown_timeout: 30s
 storage:
   root_dir: "./storage"
+auth:
+  # requests must carry "Authorization: Bearer <jwt>" signed with Ed25519 (EdDSA).
+  enabled: false
+  # PEM encoded PKIX public key: openssl pkey -in private.pem -pubout -out public.pem
+  public_key_file: "./config/jwt-public.pem"
+  issuer: "filestorage"

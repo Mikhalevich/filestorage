@@ -9,6 +9,7 @@ type Config struct {
 	Tracing    Tracing    `yaml:"tracing" required:"true"`
 	HTTPServer HTTPServer `yaml:"http_server" required:"true"`
 	Storage    Storage    `yaml:"storage" required:"true"`
+	Auth       Auth       `yaml:"auth"`
 }
 
 func (c *Config) Level() string {
@@ -37,4 +38,11 @@ type HTTPServer struct {
 
 type Storage struct {
 	RootDir string `yaml:"root_dir" required:"true"`
+}
+
+// Auth configures JWT authorization of the API. When disabled all requests are allowed.
+type Auth struct {
+	Enabled       bool   `yaml:"enabled"`
+	PublicKeyFile string `yaml:"public_key_file"`
+	Issuer        string `yaml:"issuer"`
 }

@@ -38,6 +38,8 @@ func serviceError(operation string, path string, err error) error {
 			return httperror.BadRequest(perr.Message)
 		case perror.TypeAlreadyExists:
 			return httperror.Conflict(perr.Message)
+		case perror.TypeUnauthorized:
+			return httperror.Unauthorized(perr.Message)
 		}
 	}
 

@@ -20,13 +20,21 @@ func Start(
 	ctx context.Context,
 	cfg config.HTTPServer,
 	fileSvc handler.FileService,
+	tokenVerifier middleware.TokenVerifier,
 ) error {
+	mux := createMux(handler.New(fileSvc))
+
+	// nil verifier means authorization is disabled.
+	if tokenVerifier != nil {
+		mux = middleware.Auth(tokenVerifier)(mux)
+	}
+
 	if err := startServer(
 		ctx,
 		cfg,
 		middleware.Tracing(tracing.StdTracer())(
 			middleware.Logging(logger.FromContext(ctx))(
-				createMux(handler.New(fileSvc)),
+				mux,
 			),
 		),
 	); err != nil {

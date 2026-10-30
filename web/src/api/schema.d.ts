@@ -224,6 +224,18 @@ export interface components {
                 "text/plain": components["schemas"]["Error"];
             };
         };
+        /** @description Missing or invalid bearer token. */
+        Unauthorized: {
+            headers: {
+                /** @example Bearer */
+                "WWW-Authenticate"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                /** @example invalid token */
+                "text/plain": components["schemas"]["Error"];
+            };
+        };
         /** @description Unexpected server error. */
         InternalServerError: {
             headers: {
@@ -281,6 +293,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: components["responses"]["FileList"];
+            401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalServerError"];
         };
     };
@@ -295,6 +308,7 @@ export interface operations {
         responses: {
             201: components["responses"]["StoredFiles"];
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalServerError"];
         };
     };
@@ -325,6 +339,7 @@ export interface operations {
                     "text/plain": components["schemas"]["Error"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
             /** @description Directory does not exist. Message: `directory not found`. */
             404: {
                 headers: {
@@ -356,6 +371,7 @@ export interface operations {
         responses: {
             201: components["responses"]["StoredFiles"];
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             /** @description Directory does not exist. Message: `directory not found`. */
             404: {
                 headers: {
@@ -402,6 +418,7 @@ export interface operations {
                     "text/plain": components["schemas"]["Error"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
             /** @description File does not exist. Message: `file not found`. */
             404: {
                 headers: {
@@ -448,6 +465,7 @@ export interface operations {
                     "text/plain": components["schemas"]["Error"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
             /** @description Parent directory does not exist. Message: `parent directory not found`. */
             404: {
                 headers: {
@@ -539,6 +557,7 @@ export interface operations {
                     "text/plain": components["schemas"]["Error"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
             /** @description File does not exist. Message: `file not found`. */
             404: {
                 headers: {

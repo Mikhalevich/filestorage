@@ -31,3 +31,4 @@ go.work.sum
 /config/config-web.yaml
 /config/config-mcp.yaml
 /config/config-bot.yaml
+/config/*.pem
