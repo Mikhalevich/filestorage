@@ -25,7 +25,7 @@ func callDirectoryCreate(t *testing.T, svc *fakeFileService, dirPath string) (*h
 	rec := httptest.NewRecorder()
 
 	//nolint:wrapcheck
-	return rec, handler.New(svc, nil).DirectoryCreate(rec, req)
+	return rec, handler.New(svc, nil, nil).DirectoryCreate(rec, req)
 }
 
 func TestDirectoryCreateSuccess(t *testing.T) {

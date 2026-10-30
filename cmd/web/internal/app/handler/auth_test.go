@@ -59,7 +59,7 @@ func callAuth(
 		rec = httptest.NewRecorder()
 	)
 
-	return rec, handlerFn(handler.New(nil, svc))(rec, req)
+	return rec, handlerFn(handler.New(nil, svc, svc))(rec, req)
 }
 
 func registerFn(h *handler.Handler) func(http.ResponseWriter, *http.Request) error {
@@ -141,7 +141,7 @@ func TestAuthInvalidBody(t *testing.T) {
 				var httpErr *httperror.HTTPError
 				require.ErrorAs(t, err, &httpErr)
 				assert.Equal(t, http.StatusBadRequest, httpErr.Status)
-				assert.Equal(t, "invalid request body", httpErr.Msg)
+				assert.Equal(t, "invalid credentials", httpErr.Msg)
 				assert.Empty(t, svc.gotOperation)
 			})
 		}

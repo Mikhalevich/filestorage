@@ -68,7 +68,7 @@ func validateName(name string) error {
 
 func validatePassword(password string) error {
 	if len(password) < minPasswordLen || len(password) > maxPasswordLen {
-		return perror.InvalidArgument("invalid password: must be 8-72 bytes long")
+		return perror.InvalidArgument("invalid password: must be 1-72 bytes long")
 	}
 
 	return nil

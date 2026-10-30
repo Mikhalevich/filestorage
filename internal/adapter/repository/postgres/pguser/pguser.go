@@ -100,6 +100,7 @@ func (p *PgUser) UserByName(
 		if errors.Is(err, sql.ErrNoRows) {
 			return user.User{}, perror.NotFound("user not found")
 		}
+
 		return user.User{}, fmt.Errorf("get context: %w", err)
 	}
 
