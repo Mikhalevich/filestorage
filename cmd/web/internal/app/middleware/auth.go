@@ -8,6 +8,7 @@ import (
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/auth"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
 )
 
@@ -24,6 +25,19 @@ type TokenVerifier interface {
 func Auth(verifier TokenVerifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rspWriter http.ResponseWriter, req *http.Request) {
+			res, ok := resource.FromContext(req.Context())
+			if !ok {
+				http.Error(rspWriter, "invalid url path", http.StatusBadRequest)
+
+				return
+			}
+
+			if res.IsPublic() {
+				next.ServeHTTP(rspWriter, req)
+
+				return
+			}
+
 			claims, err := verifyRequest(verifier, req)
 			if err != nil {
 				msg := "unauthorized"
@@ -37,8 +51,18 @@ func Auth(verifier TokenVerifier) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := auth.WithClaims(req.Context(), claims)
-			ctx = logger.WithLogger(ctx, logger.FromContext(ctx).WithField("subject", claims.Subject))
+			if claims.Subject != res.User {
+				http.Error(rspWriter, "forbidden", http.StatusForbidden)
+
+				return
+			}
+
+			ctx := req.Context()
+			ctx = logger.WithLogger(
+				ctx,
+				logger.FromContext(ctx).
+					WithField("subject", claims.Subject),
+			)
 
 			next.ServeHTTP(rspWriter, req.WithContext(ctx))
 		})

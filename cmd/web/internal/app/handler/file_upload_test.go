@@ -61,8 +61,8 @@ func callFileUpload(
 ) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload/"+dirPath, body)
-	req.SetPathValue(handler.PathValueDirPath, dirPath)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload/"+testUser+"/"+dirPath, body)
+	req = withResource(req, dirPath)
 	req.Header.Set("Content-Type", contentType)
 
 	rec := httptest.NewRecorder()
@@ -84,7 +84,7 @@ func TestFileUploadSuccess(t *testing.T) {
 	rec, err := callFileUpload(t, svc, "sub/dir", body, contentType)
 	require.NoError(t, err)
 
-	assert.Equal(t, "sub/dir", svc.gotPath)
+	assert.Equal(t, testUser+"/sub/dir", svc.gotPath)
 	assert.Equal(t, []savedFile{
 		{name: "a.txt", content: "aaa"},
 		{name: "b.txt", content: "bbbbb"},

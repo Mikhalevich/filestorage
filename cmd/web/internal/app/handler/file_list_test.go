@@ -17,7 +17,18 @@ import (
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler/httperror"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/file"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 )
+
+const testUser = "alice"
+
+// withResource puts the resource of testUser into the request context the way the resource middleware does.
+func withResource(req *http.Request, resPath string) *http.Request {
+	return req.WithContext(resource.WithContext(req.Context(), resource.Resource{
+		User: testUser,
+		Path: resPath,
+	}))
+}
 
 type fakeFileService struct {
 	files   []file.File
@@ -98,8 +109,8 @@ func (f *fakeFileService) CreateDirectory(dirPath string) error {
 func callFileList(t *testing.T, svc *fakeFileService, dirPath string) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/files/"+dirPath, nil)
-	req.SetPathValue(handler.PathValueDirPath, dirPath)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/files/"+testUser+"/"+dirPath, nil)
+	req = withResource(req, dirPath)
 
 	rec := httptest.NewRecorder()
 
@@ -122,7 +133,7 @@ func TestFileListSuccess(t *testing.T) {
 	rec, err := callFileList(t, svc, "sub/dir")
 	require.NoError(t, err)
 
-	assert.Equal(t, "sub/dir", svc.gotPath)
+	assert.Equal(t, testUser+"/sub/dir", svc.gotPath)
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.JSONEq(t, `[
 		{"name":"sub","type":"directory","size":0,"mod_time":"2026-01-01T00:00:00Z"},

@@ -19,8 +19,8 @@ import (
 func callDirectoryCreate(t *testing.T, svc *fakeFileService, dirPath string) (*httptest.ResponseRecorder, error) {
 	t.Helper()
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/dirs/"+url.PathEscape(dirPath), nil)
-	req.SetPathValue(handler.PathValueDirPath, dirPath)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/dirs/"+testUser+"/"+url.PathEscape(dirPath), nil)
+	req = withResource(req, dirPath)
 
 	rec := httptest.NewRecorder()
 
@@ -36,7 +36,7 @@ func TestDirectoryCreateSuccess(t *testing.T) {
 	rec, err := callDirectoryCreate(t, svc, "sub/new")
 	require.NoError(t, err)
 
-	assert.Equal(t, "sub/new", svc.gotPath)
+	assert.Equal(t, testUser+"/sub/new", svc.gotPath)
 	assert.Equal(t, http.StatusCreated, rec.Code)
 	assert.Empty(t, rec.Body.String())
 }
