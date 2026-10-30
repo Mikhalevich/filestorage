@@ -2,6 +2,7 @@ package authsvc
 
 import (
 	"crypto/ed25519"
+	"fmt"
 	"time"
 )
 
@@ -10,21 +11,14 @@ const (
 )
 
 type Service struct {
-	privateKey ed25519.PrivateKey
 	publicKey  ed25519.PublicKey
+	privateKey ed25519.PrivateKey
 	issuer     string
 	ttl        time.Duration
 	now        func() time.Time
 }
 
 type Option func(s *Service)
-
-// WithPrivateKey enables token issuing. Without it the service can only verify tokens.
-func WithPrivateKey(key ed25519.PrivateKey) Option {
-	return func(s *Service) {
-		s.privateKey = key
-	}
-}
 
 // WithIssuer sets the issuer written into issued tokens and required in verified ones.
 func WithIssuer(issuer string) Option {
@@ -51,16 +45,33 @@ func WithTimeFunc(now func() time.Time) Option {
 
 // New creates auth service issuing and verifying EdDSA (Ed25519) signed JWTs.
 // Tokens are verified with publicKey.
-func New(publicKey ed25519.PublicKey, opts ...Option) *Service {
+func New(publicKey, privateKey []byte, opts ...Option) (*Service, error) {
+	var (
+		edPublicKey  ed25519.PublicKey
+		edPrivateKey ed25519.PrivateKey
+		err          error
+	)
+
+	edPublicKey, err = parsePublicKeyPEM(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid public key: %w", err)
+	}
+
+	edPrivateKey, err = parsePrivateKeyPEM(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key: %w", err)
+	}
+
 	svc := &Service{
-		publicKey: publicKey,
-		ttl:       defaultTTL,
-		now:       time.Now,
+		publicKey:  edPublicKey,
+		privateKey: edPrivateKey,
+		ttl:        defaultTTL,
+		now:        time.Now,
 	}
 
 	for _, opt := range opts {
 		opt(svc)
 	}
 
-	return svc
+	return svc, nil
 }

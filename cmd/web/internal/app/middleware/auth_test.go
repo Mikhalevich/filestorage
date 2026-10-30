@@ -3,6 +3,8 @@ package middleware_test
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +23,23 @@ func TestAuth(t *testing.T) {
 		t.Fatalf("generate key: %v", err)
 	}
 
-	svc := authsvc.New(pub, authsvc.WithPrivateKey(priv))
+	pubDER, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		t.Fatalf("marshal public key: %v", err)
+	}
+
+	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatalf("marshal private key: %v", err)
+	}
+
+	svc, err := authsvc.New(
+		pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}),
+		pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}),
+	)
+	if err != nil {
+		t.Fatalf("new auth service: %v", err)
+	}
 
 	token, err := svc.IssueToken("alice")
 	if err != nil {

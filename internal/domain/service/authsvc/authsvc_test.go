@@ -20,13 +20,40 @@ const (
 	testIssuer = "filestorage"
 )
 
-func generateKey(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+type testKey struct {
+	pub     ed25519.PublicKey
+	priv    ed25519.PrivateKey
+	pubPEM  []byte
+	privPEM []byte
+}
+
+func generateKey(t *testing.T) testKey {
 	t.Helper()
 
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 
-	return pub, priv
+	pubDER, err := x509.MarshalPKIXPublicKey(pub)
+	require.NoError(t, err)
+
+	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
+	require.NoError(t, err)
+
+	return testKey{
+		pub:     pub,
+		priv:    priv,
+		pubPEM:  pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}),
+		privPEM: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER}),
+	}
+}
+
+func newService(t *testing.T, publicKey, privateKey []byte, opts ...authsvc.Option) *authsvc.Service {
+	t.Helper()
+
+	svc, err := authsvc.New(publicKey, privateKey, opts...)
+	require.NoError(t, err)
+
+	return svc
 }
 
 func fixedTime(tm time.Time) func() time.Time {
@@ -36,12 +63,13 @@ func fixedTime(tm time.Time) func() time.Time {
 func TestIssueAndVerify(t *testing.T) {
 	t.Parallel()
 
-	pub, priv := generateKey(t)
+	key := generateKey(t)
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 
-	svc := authsvc.New(
-		pub,
-		authsvc.WithPrivateKey(priv),
+	svc := newService(
+		t,
+		key.pubPEM,
+		key.privPEM,
 		authsvc.WithIssuer(testIssuer),
 		authsvc.WithTTL(time.Minute),
 		authsvc.WithTimeFunc(fixedTime(now)),
@@ -59,12 +87,9 @@ func TestIssueAndVerify(t *testing.T) {
 func TestIssueTokenErrors(t *testing.T) {
 	t.Parallel()
 
-	pub, priv := generateKey(t)
+	key := generateKey(t)
 
-	_, err := authsvc.New(pub).IssueToken("alice")
-	require.Error(t, err, "verify-only service must not issue tokens")
-
-	_, err = authsvc.New(pub, authsvc.WithPrivateKey(priv)).IssueToken("")
+	_, err := newService(t, key.pubPEM, key.privPEM).IssueToken("")
 	require.Error(t, err)
 	assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "%v", err)
 }
@@ -72,8 +97,8 @@ func TestIssueTokenErrors(t *testing.T) {
 func TestVerifyTokenInvalid(t *testing.T) {
 	t.Parallel()
 
-	pub, priv := generateKey(t)
-	_, otherPriv := generateKey(t)
+	key := generateKey(t)
+	otherKey := generateKey(t)
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 
 	issue := func(t *testing.T, priv ed25519.PrivateKey, issuer string, ttl time.Duration, subject string) string {
@@ -93,7 +118,7 @@ func TestVerifyTokenInvalid(t *testing.T) {
 		Issuer:    testIssuer,
 		Subject:   "alice",
 		ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-	}).SignedString([]byte(pub))
+	}).SignedString([]byte(key.pub))
 	require.NoError(t, err)
 
 	noneToken, err := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.RegisteredClaims{
@@ -106,7 +131,7 @@ func TestVerifyTokenInvalid(t *testing.T) {
 	noExpToken, err := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.RegisteredClaims{
 		Issuer:  testIssuer,
 		Subject: "alice",
-	}).SignedString(priv)
+	}).SignedString(key.priv)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -115,16 +140,16 @@ func TestVerifyTokenInvalid(t *testing.T) {
 	}{
 		{name: "garbage", token: "not a token"},
 		{name: "empty", token: ""},
-		{name: "expired", token: issue(t, priv, testIssuer, -time.Second, "alice")},
-		{name: "wrong key", token: issue(t, otherPriv, testIssuer, time.Hour, "alice")},
-		{name: "wrong issuer", token: issue(t, priv, "other", time.Hour, "alice")},
-		{name: "empty subject", token: issue(t, priv, testIssuer, time.Hour, "")},
+		{name: "expired", token: issue(t, key.priv, testIssuer, -time.Second, "alice")},
+		{name: "wrong key", token: issue(t, otherKey.priv, testIssuer, time.Hour, "alice")},
+		{name: "wrong issuer", token: issue(t, key.priv, "other", time.Hour, "alice")},
+		{name: "empty subject", token: issue(t, key.priv, testIssuer, time.Hour, "")},
 		{name: "no expiration", token: noExpToken},
 		{name: "hs256 with public key as secret", token: hsToken},
 		{name: "alg none", token: noneToken},
 	}
 
-	svc := authsvc.New(pub, authsvc.WithIssuer(testIssuer), authsvc.WithTimeFunc(fixedTime(now)))
+	svc := newService(t, key.pubPEM, key.privPEM, authsvc.WithIssuer(testIssuer), authsvc.WithTimeFunc(fixedTime(now)))
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -137,31 +162,30 @@ func TestVerifyTokenInvalid(t *testing.T) {
 	}
 }
 
-func TestParseKeysPEM(t *testing.T) {
+func TestNewInvalidKeys(t *testing.T) {
 	t.Parallel()
 
-	pub, priv := generateKey(t)
+	key := generateKey(t)
 
-	pubDER, err := x509.MarshalPKIXPublicKey(pub)
-	require.NoError(t, err)
+	tests := []struct {
+		name       string
+		publicKey  []byte
+		privateKey []byte
+	}{
+		{name: "garbage public key", publicKey: []byte("garbage")},
+		{name: "empty public key", publicKey: nil},
+		{name: "private key as public key", publicKey: key.privPEM},
+		{name: "empty private key", publicKey: key.pubPEM, privateKey: nil},
+		{name: "garbage private key", publicKey: key.pubPEM, privateKey: []byte("garbage")},
+		{name: "public key as private key", publicKey: key.pubPEM, privateKey: key.pubPEM},
+	}
 
-	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
-	require.NoError(t, err)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
-	privPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER})
-
-	parsedPub, err := authsvc.ParsePublicKeyPEM(pubPEM)
-	require.NoError(t, err)
-	assert.True(t, pub.Equal(parsedPub))
-
-	parsedPriv, err := authsvc.ParsePrivateKeyPEM(privPEM)
-	require.NoError(t, err)
-	assert.True(t, priv.Equal(parsedPriv))
-
-	_, err = authsvc.ParsePublicKeyPEM(privPEM)
-	require.Error(t, err)
-
-	_, err = authsvc.ParsePrivateKeyPEM([]byte("garbage"))
-	require.Error(t, err)
+			_, err := authsvc.New(tc.publicKey, tc.privateKey)
+			require.Error(t, err)
+		})
+	}
 }

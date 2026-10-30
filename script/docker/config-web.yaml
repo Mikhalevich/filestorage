@@ -10,8 +10,6 @@ http_server:
 storage:
   root_dir: "/data/storage"
 auth:
-  # requests must carry "Authorization: Bearer <jwt>" signed with Ed25519 (EdDSA).
-  enabled: false
-  # PEM encoded PKIX public key, mount it into the container when enabling auth.
-  public_key_file: "/etc/filestorage/jwt-public.pem"
+  public_key: "some public key"
+  privage_key: "some private key"
   issuer: "filestorage"

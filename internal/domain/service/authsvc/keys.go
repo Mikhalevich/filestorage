@@ -8,8 +8,8 @@ import (
 	"fmt"
 )
 
-// ParsePublicKeyPEM parses PEM encoded PKIX Ed25519 public key ("PUBLIC KEY" block).
-func ParsePublicKeyPEM(data []byte) (ed25519.PublicKey, error) {
+// parsePublicKeyPEM parses PEM encoded PKIX Ed25519 public key ("PUBLIC KEY" block).
+func parsePublicKeyPEM(data []byte) (ed25519.PublicKey, error) {
 	der, err := decodePEM(data, "PUBLIC KEY")
 	if err != nil {
 		return nil, fmt.Errorf("decode pem: %w", err)
@@ -28,8 +28,8 @@ func ParsePublicKeyPEM(data []byte) (ed25519.PublicKey, error) {
 	return edKey, nil
 }
 
-// ParsePrivateKeyPEM parses PEM encoded PKCS8 Ed25519 private key ("PRIVATE KEY" block).
-func ParsePrivateKeyPEM(data []byte) (ed25519.PrivateKey, error) {
+// parsePrivateKeyPEM parses PEM encoded PKCS8 Ed25519 private key ("PRIVATE KEY" block).
+func parsePrivateKeyPEM(data []byte) (ed25519.PrivateKey, error) {
 	der, err := decodePEM(data, "PRIVATE KEY")
 	if err != nil {
 		return nil, fmt.Errorf("decode pem: %w", err)

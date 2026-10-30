@@ -1,7 +1,6 @@
 package authsvc
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -11,10 +10,6 @@ import (
 
 // IssueToken creates a signed token for subject valid for the service ttl.
 func (s *Service) IssueToken(subject string) (string, error) {
-	if s.privateKey == nil {
-		return "", errors.New("private key is not configured")
-	}
-
 	if subject == "" {
 		return "", fmt.Errorf("validate subject: %w", perror.InvalidArgument("empty subject"))
 	}
