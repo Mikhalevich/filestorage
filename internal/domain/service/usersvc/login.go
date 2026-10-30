@@ -3,6 +3,7 @@ package usersvc
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -13,7 +14,9 @@ import (
 // dummyHash is compared against for unknown users, so they take as long as a wrong password.
 //
 //nolint:gochecknoglobals
-var dummyHash = mustHash("dummy password")
+var dummyHash = sync.OnceValue(func() []byte {
+	return mustHash("dummy password")
+})
 
 func (s *Service) UserByNameAndPwd(
 	ctx context.Context,
@@ -26,7 +29,7 @@ func (s *Service) UserByNameAndPwd(
 			return user.User{}, fmt.Errorf("get user: %w", err)
 		}
 
-		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		_ = bcrypt.CompareHashAndPassword(dummyHash(), []byte(password))
 
 		return user.User{}, fmt.Errorf("get user: %w", perror.NotFound("user not found"))
 	}
