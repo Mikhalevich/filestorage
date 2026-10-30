@@ -10,8 +10,14 @@ http_server:
 storage:
   root_dir: "/data/storage"
 auth:
-  public_key: "some public key"
-  private_key: "some private key"
+  public_key: |
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA4Zi2XNcGbfY3Str7LGhL0eO1vGA//r42m4KiRuyWN+Y=
+-----END PUBLIC KEY-----
+  private_key: |
+-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIBR8r86iLlfil00DM2Qr8hATb8UY73+HX2eNUrR/+ns6
+-----END PRIVATE KEY-----
   issuer: "filestorage"
   token_ttl: 1h
 postgres:
