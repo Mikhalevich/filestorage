@@ -20,19 +20,15 @@ func Start(
 	fileSvc handler.FileService,
 	tokenVerifier middleware.TokenVerifier,
 ) error {
-	mux := router.CreateMux(handler.New(fileSvc))
+	mux := router.CreateMux(
+		handler.New(fileSvc),
+		middleware.Resource(),
+		middleware.Tracing(tracing.StdTracer()),
+		middleware.Logging(logger.FromContext(ctx)),
+		middleware.Auth(tokenVerifier),
+	)
 
-	if err := startServer(
-		ctx,
-		cfg,
-		middleware.Resource()(
-			middleware.Tracing(tracing.StdTracer())(
-				middleware.Logging(logger.FromContext(ctx))(
-					middleware.Auth(tokenVerifier)(mux),
-				),
-			),
-		),
-	); err != nil {
+	if err := startServer(ctx, cfg, mux); err != nil {
 		return fmt.Errorf("start server: %w", err)
 	}
 

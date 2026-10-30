@@ -3,6 +3,7 @@ package router
 import (
 	"errors"
 	"net/http"
+	"slices"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -10,8 +11,19 @@ import (
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
 )
 
-func registerHandler(mux *http.ServeMux, path string, h HandlerFunc) {
-	mux.HandleFunc(path, h.ToHTTPHandlerFunc())
+func registerHandler(
+	mux *http.ServeMux,
+	pattern string,
+	h HandlerFunc,
+	middlewares []func(http.Handler) http.Handler,
+) {
+	var hdl http.Handler = h.ToHTTPHandlerFunc()
+
+	for _, mw := range slices.Backward(middlewares) {
+		hdl = mw(hdl)
+	}
+
+	mux.Handle(pattern, hdl)
 }
 
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error

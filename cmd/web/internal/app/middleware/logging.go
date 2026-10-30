@@ -5,24 +5,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
 )
 
 func Logging(log logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rspWriter http.ResponseWriter, req *http.Request) {
-			var (
-				start  = time.Now()
-				ctx    = req.Context()
-				res, _ = resource.FromContext(ctx)
-			)
+			start := time.Now()
 
 			reqLog := log.WithFields(logger.Fields{
 				"method":      req.Method,
 				"path":        req.URL.Path,
 				"remote_addr": req.RemoteAddr,
-				"user":        res.User,
 			})
 
 			rec := &statusRecorder{
@@ -30,7 +24,7 @@ func Logging(log logger.Logger) func(http.Handler) http.Handler {
 				status:         http.StatusOK,
 			}
 
-			next.ServeHTTP(rec, req.WithContext(logger.WithLogger(ctx, reqLog)))
+			next.ServeHTTP(rec, req.WithContext(logger.WithLogger(req.Context(), reqLog)))
 
 			accessLog := reqLog.WithContext(req.Context()).WithFields(logger.Fields{
 				"status":   rec.status,
