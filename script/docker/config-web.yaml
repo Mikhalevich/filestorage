@@ -9,3 +9,7 @@ http_server:
   shutdown_timeout: 30s
 storage:
   root_dir: "/data/storage"
+auth:
+  public_key: "some public key"
+  privage_key: "some private key"
+  issuer: "filestorage"

@@ -7,4 +7,5 @@ const (
 	TypeNotFound
 	TypeInvalidArgument
 	TypeAlreadyExists
+	TypeUnauthorized
 )

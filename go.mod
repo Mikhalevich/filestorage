@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	github.com/Mikhalevich/tgbot v1.1.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jinzhu/configor v1.2.2
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/sirupsen/logrus v1.10.2

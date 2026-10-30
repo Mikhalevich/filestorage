@@ -49,3 +49,7 @@ func InvalidArgument(msg string) Error {
 func AlreadyExists(msg string) Error {
 	return New(TypeAlreadyExists, msg)
 }
+
+func Unauthorized(msg string) Error {
+	return New(TypeUnauthorized, msg)
+}

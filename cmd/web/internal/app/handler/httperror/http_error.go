@@ -41,3 +41,10 @@ func Conflict(msg string) *HTTPError {
 		Msg:    msg,
 	}
 }
+
+func Unauthorized(msg string) *HTTPError {
+	return &HTTPError{
+		Status: http.StatusUnauthorized,
+		Msg:    msg,
+	}
+}
