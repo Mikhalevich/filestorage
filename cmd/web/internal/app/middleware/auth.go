@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/Mikhalevich/filestorage/internal/domain/model/auth"
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
 	"github.com/Mikhalevich/filestorage/internal/infra/logger"
@@ -28,9 +26,6 @@ func Auth(verifier TokenVerifier) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(rspWriter http.ResponseWriter, req *http.Request) {
 			claims, err := verifyRequest(verifier, req)
 			if err != nil {
-				logger.FromContext(req.Context()).WithError(err).Warn("unauthorized request")
-				trace.SpanFromContext(req.Context()).RecordError(err)
-
 				msg := "unauthorized"
 				if perr, ok := perror.ParseError(err); ok {
 					msg = perr.Message
