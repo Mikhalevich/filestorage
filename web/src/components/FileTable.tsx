@@ -9,10 +9,12 @@ type Props = {
   deleting: ReadonlySet<string>
   onDelete: (name: string) => void
   onOpenDir: (name: string) => void
+  // onDownload replaces the plain download link for files that need the session token.
+  onDownload?: (name: string) => void
 }
 
 // FileTable keeps the server order: directories by name, then files oldest first, ties by name.
-export function FileTable({ user, dir, files, highlighted, deleting, onDelete, onOpenDir }: Props) {
+export function FileTable({ user, dir, files, highlighted, deleting, onDelete, onOpenDir, onDownload }: Props) {
   if (files.length === 0) {
     return <p className="empty">This directory is empty.</p>
   }
@@ -50,9 +52,20 @@ export function FileTable({ user, dir, files, highlighted, deleting, onDelete, o
             ) : (
               <tr key={f.name} className={highlighted.has(f.name) ? 'row-new' : undefined}>
                 <td className="name">
-                  <a href={downloadURL(user, dir, f.name)} download={f.name} title={`Download ${f.name}`}>
-                    {f.name}
-                  </a>
+                  {onDownload === undefined ? (
+                    <a href={downloadURL(user, dir, f.name)} download={f.name} title={`Download ${f.name}`}>
+                      {f.name}
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      className="file-link"
+                      title={`Download ${f.name}`}
+                      onClick={() => onDownload(f.name)}
+                    >
+                      {f.name}
+                    </button>
+                  )}
                 </td>
                 <td className="num">{formatSize(f.size)}</td>
                 <td className="time">
