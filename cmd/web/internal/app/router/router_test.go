@@ -187,7 +187,7 @@ func TestCreateMux(t *testing.T) {
 				mux = router.CreateMux(
 					handler.New(svc, fakeUserService{}, fakeUserService{}),
 					nil,
-					[]func(http.Handler) http.Handler{
+					[]router.Middleware{
 						middleware.Resource(),
 						middleware.Auth(fakeVerifier{}),
 					},

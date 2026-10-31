@@ -31,7 +31,7 @@ func Tracing(tracer tracing.Tracer) func(http.Handler) http.Handler {
 			)
 			defer span.End()
 
-			rec := &statusRecorder{
+			rec := &responseRecorder{
 				ResponseWriter: rspWriter,
 				status:         http.StatusOK,
 			}
