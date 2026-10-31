@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -19,7 +18,7 @@ func Logging(log logger.Logger) func(http.Handler) http.Handler {
 				"remote_addr": req.RemoteAddr,
 			})
 
-			rec := &statusRecorder{
+			rec := &responseRecorder{
 				ResponseWriter: rspWriter,
 				status:         http.StatusOK,
 			}
@@ -42,38 +41,4 @@ func Logging(log logger.Logger) func(http.Handler) http.Handler {
 			}
 		})
 	}
-}
-
-type statusRecorder struct {
-	http.ResponseWriter
-
-	status      int
-	bytes       int
-	wroteHeader bool
-}
-
-func (s *statusRecorder) WriteHeader(code int) {
-	if !s.wroteHeader {
-		s.status = code
-		s.wroteHeader = true
-	}
-
-	s.ResponseWriter.WriteHeader(code)
-}
-
-func (s *statusRecorder) Write(b []byte) (int, error) {
-	s.wroteHeader = true
-
-	written, err := s.ResponseWriter.Write(b)
-	s.bytes += written
-
-	if err != nil {
-		return written, fmt.Errorf("write response: %w", err)
-	}
-
-	return written, nil
-}
-
-func (s *statusRecorder) Unwrap() http.ResponseWriter {
-	return s.ResponseWriter
 }

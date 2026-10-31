@@ -15,7 +15,7 @@ func registerHandler(
 	mux *http.ServeMux,
 	pattern string,
 	h HandlerFunc,
-	middlewares []func(http.Handler) http.Handler,
+	middlewares []Middleware,
 ) {
 	var hdl http.Handler = h.ToHTTPHandlerFunc()
 
@@ -26,6 +26,7 @@ func registerHandler(
 	mux.Handle(pattern, hdl)
 }
 
+type Middleware func(http.Handler) http.Handler
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
 func (h HandlerFunc) ToHTTPHandlerFunc() http.HandlerFunc {

@@ -24,11 +24,11 @@ func Start(
 ) error {
 	mux := router.CreateMux(
 		handler.New(fileSvc, registerUsecase, loginUsecase),
-		[]func(http.Handler) http.Handler{
+		[]router.Middleware{
 			middleware.Tracing(tracing.StdTracer()),
 			middleware.Logging(logger.FromContext(ctx)),
 		},
-		[]func(http.Handler) http.Handler{
+		[]router.Middleware{
 			middleware.Resource(),
 			middleware.Auth(tokenVerifier),
 		},

@@ -13,8 +13,8 @@ import (
 // with User and ResourcePath.
 func CreateMux(
 	hdl *handler.Handler,
-	common []func(http.Handler) http.Handler,
-	resourceMiddlewares []func(http.Handler) http.Handler,
+	common []Middleware,
+	resourceMiddlewares []Middleware,
 ) http.Handler {
 	var (
 		mux          = http.NewServeMux()
