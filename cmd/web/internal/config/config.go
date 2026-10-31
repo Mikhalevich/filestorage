@@ -10,6 +10,7 @@ type Config struct {
 	HTTPServer HTTPServer `yaml:"http_server" required:"true"`
 	Storage    Storage    `yaml:"storage" required:"true"`
 	Auth       Auth       `yaml:"auth" required:"true"`
+	Postgres   Postgres   `yaml:"postgres" required:"true"`
 }
 
 func (c *Config) Level() string {
@@ -40,9 +41,13 @@ type Storage struct {
 	RootDir string `yaml:"root_dir" required:"true"`
 }
 
-// Auth configures JWT authorization of the API. When disabled all requests are allowed.
 type Auth struct {
-	PublicKey  string `yaml:"public_key" required:"true"`
-	PrivateKey string `yaml:"private_key" required:"true"`
-	Issuer     string `yaml:"issuer" required:"true"`
+	PublicKey  string        `yaml:"public_key" required:"true"`
+	PrivateKey string        `yaml:"private_key" required:"true"`
+	Issuer     string        `yaml:"issuer" required:"true"`
+	TokenTTL   time.Duration `yaml:"token_ttl" default:"1h"`
+}
+
+type Postgres struct {
+	Connection string `yaml:"connection" required:"true"`
 }

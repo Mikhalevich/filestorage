@@ -26,7 +26,7 @@ func callFileDelete(t *testing.T, svc *fakeFileService, filePath string) (*httpt
 	rec := httptest.NewRecorder()
 
 	//nolint:wrapcheck
-	return rec, handler.New(svc).FileDelete(rec, req)
+	return rec, handler.New(svc, nil, nil).FileDelete(rec, req)
 }
 
 func TestFileDeleteSuccess(t *testing.T) {

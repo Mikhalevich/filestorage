@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -60,6 +61,17 @@ func (nopCloser) Close() error {
 	return nil
 }
 
+// fakeUserService issues the user name as the token.
+type fakeUserService struct{}
+
+func (fakeUserService) Register(_ context.Context, name string, _ string) (string, error) {
+	return name, nil
+}
+
+func (fakeUserService) Login(_ context.Context, name string, _ string) (string, error) {
+	return name, nil
+}
+
 // fakeVerifier accepts any non-empty token and uses it as the subject.
 type fakeVerifier struct{}
 
@@ -78,6 +90,7 @@ func TestCreateMux(t *testing.T) {
 		name     string
 		method   string
 		target   string
+		body     string
 		token    string
 		wantCode int
 		wantPath string
@@ -143,6 +156,20 @@ func TestCreateMux(t *testing.T) {
 			wantCode: http.StatusForbidden,
 		},
 		{
+			name:     "register without token",
+			method:   http.MethodPost,
+			target:   "/auth/register",
+			body:     `{"username":"alice","password":"secret123"}`,
+			wantCode: http.StatusCreated,
+		},
+		{
+			name:     "login without token",
+			method:   http.MethodPost,
+			target:   "/auth/login",
+			body:     `{"username":"alice","password":"secret123"}`,
+			wantCode: http.StatusOK,
+		},
+		{
 			name:     "unknown route",
 			method:   http.MethodGet,
 			target:   "/unknown/alice/",
@@ -158,12 +185,15 @@ func TestCreateMux(t *testing.T) {
 			var (
 				svc = &fakeFileService{}
 				mux = router.CreateMux(
-					handler.New(svc),
-					middleware.Resource(),
-					middleware.Auth(fakeVerifier{}),
+					handler.New(svc, fakeUserService{}, fakeUserService{}),
+					nil,
+					[]func(http.Handler) http.Handler{
+						middleware.Resource(),
+						middleware.Auth(fakeVerifier{}),
+					},
 				)
 				rec = httptest.NewRecorder()
-				req = httptest.NewRequestWithContext(t.Context(), tc.method, tc.target, nil)
+				req = httptest.NewRequestWithContext(t.Context(), tc.method, tc.target, strings.NewReader(tc.body))
 			)
 
 			if tc.token != "" {

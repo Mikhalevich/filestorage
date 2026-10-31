@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 const apiTarget = process.env.API_TARGET ?? 'http://localhost:8080'
 
 const proxy = {
+  '/auth/': apiTarget,
   '/files/': apiTarget,
   '/download/': apiTarget,
   '/dirs/': apiTarget,

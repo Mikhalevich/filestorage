@@ -18,14 +18,20 @@ func Start(
 	ctx context.Context,
 	cfg config.HTTPServer,
 	fileSvc handler.FileService,
+	registerUsecase handler.RegisterUsecase,
+	loginUsecase handler.LoginUsecase,
 	tokenVerifier middleware.TokenVerifier,
 ) error {
 	mux := router.CreateMux(
-		handler.New(fileSvc),
-		middleware.Resource(),
-		middleware.Tracing(tracing.StdTracer()),
-		middleware.Logging(logger.FromContext(ctx)),
-		middleware.Auth(tokenVerifier),
+		handler.New(fileSvc, registerUsecase, loginUsecase),
+		[]func(http.Handler) http.Handler{
+			middleware.Tracing(tracing.StdTracer()),
+			middleware.Logging(logger.FromContext(ctx)),
+		},
+		[]func(http.Handler) http.Handler{
+			middleware.Resource(),
+			middleware.Auth(tokenVerifier),
+		},
 	)
 
 	if err := startServer(ctx, cfg, mux); err != nil {

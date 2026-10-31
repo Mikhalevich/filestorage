@@ -2,19 +2,33 @@ package router
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/Mikhalevich/filestorage/cmd/web/internal/app/handler"
 )
 
 // CreateMux registers handlers wrapped with middlewares, the first middleware is the outermost one.
-// Middlewares run after the route is matched, so they can read path values with User and ResourcePath.
-func CreateMux(hdl *handler.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+// common middlewares wrap every route. resourceMiddlewares wrap only routes addressing a user's resource
+// (inside common ones). Middlewares run after the route is matched, so they can read path values
+// with User and ResourcePath.
+func CreateMux(
+	hdl *handler.Handler,
+	common []func(http.Handler) http.Handler,
+	resourceMiddlewares []func(http.Handler) http.Handler,
+) http.Handler {
 	var (
-		mux      = http.NewServeMux()
+		mux          = http.NewServeMux()
+		resourceMWs  = slices.Concat(common, resourceMiddlewares)
+		registerAuth = func(pattern string, h HandlerFunc) {
+			registerHandler(mux, pattern, h, common)
+		}
 		register = func(pattern string, h HandlerFunc) {
-			registerHandler(mux, pattern, h, middlewares)
+			registerHandler(mux, pattern, h, resourceMWs)
 		}
 	)
+
+	registerAuth("POST /auth/register", hdl.AuthRegister)
+	registerAuth("POST /auth/login", hdl.AuthLogin)
 
 	register("GET /files/{user}/{resourcePath...}", hdl.FileList)
 	register("POST /files/{user}/{resourcePath...}", hdl.FileUpload)

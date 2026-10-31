@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -18,13 +19,29 @@ type FileService interface {
 	CreateDirectory(res resource.Resource) error
 }
 
-type Handler struct {
-	fileSvc FileService
+type RegisterUsecase interface {
+	Register(ctx context.Context, name string, password string) (string, error)
 }
 
-func New(fileSvc FileService) *Handler {
+type LoginUsecase interface {
+	Login(ctx context.Context, name string, password string) (string, error)
+}
+
+type Handler struct {
+	fileSvc         FileService
+	registerUsecase RegisterUsecase
+	loginUsecase    LoginUsecase
+}
+
+func New(
+	fileSvc FileService,
+	registerUsecase RegisterUsecase,
+	loginUsecase LoginUsecase,
+) *Handler {
 	return &Handler{
-		fileSvc: fileSvc,
+		fileSvc:         fileSvc,
+		registerUsecase: registerUsecase,
+		loginUsecase:    loginUsecase,
 	}
 }
 

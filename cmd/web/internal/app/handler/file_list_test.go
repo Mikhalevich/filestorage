@@ -115,7 +115,7 @@ func callFileList(t *testing.T, svc *fakeFileService, dirPath string) (*httptest
 	rec := httptest.NewRecorder()
 
 	//nolint:wrapcheck
-	return rec, handler.New(svc).FileList(rec, req)
+	return rec, handler.New(svc, nil, nil).FileList(rec, req)
 }
 
 func TestFileListSuccess(t *testing.T) {
