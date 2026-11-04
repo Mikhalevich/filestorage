@@ -219,13 +219,15 @@ export default function App() {
 
       <main>
         <UploadPanel key={`${user}:${dir}`} user={user} dir={dir} onUploaded={onUploaded} />
-        <CreateDirPanel
-          key={`mkdir:${user}:${dir}`}
-          user={user}
-          dir={dir}
-          onOpen={navigate}
-          onCreated={() => setReload((r) => r + 1)}
-        />
+        {user !== PUBLIC_USER && (
+          <CreateDirPanel
+            key={`mkdir:${user}:${dir}`}
+            user={user}
+            dir={dir}
+            onOpen={navigate}
+            onCreated={() => setReload((r) => r + 1)}
+          />
+        )}
 
         <section aria-label="Files" aria-busy={loading}>
           {shown === undefined && <p className="muted">Loading…</p>}

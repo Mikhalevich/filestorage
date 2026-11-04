@@ -20,7 +20,6 @@ type FileService interface {
 	OpenFile(res resource.Resource) (file.File, io.ReadSeekCloser, error)
 	SaveFile(res resource.Resource, fileName string, content io.Reader) (file.File, error)
 	DeleteFile(res resource.Resource) error
-	CreateDirectory(res resource.Resource) error
 }
 
 type Tool struct {

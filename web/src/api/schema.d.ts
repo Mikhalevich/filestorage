@@ -149,6 +149,7 @@ export interface paths {
          * Create a directory
          * @description Creates the last path element only: the parent directory must exist.
          *     An existing file or directory at the path is never replaced.
+         *     Directories can't be created in the `public` user's space.
          */
         post: operations["createDirectory"];
         delete?: never;
@@ -706,7 +707,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Invalid directory path. Possible messages: `invalid user`, `invalid directory path`, `not a directory`. */
+            /** @description Invalid directory path, or the user is `public`. Possible messages: `invalid user`, `invalid directory path`, `not a directory`, `unable to create directory for public space`. */
             400: {
                 headers: {
                     [name: string]: unknown;
