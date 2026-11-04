@@ -18,6 +18,10 @@ const (
 // CreateDirectory creates dirPath directory relative to the service root.
 // Only the last path element is created: the parent directory must exist.
 func (s *Service) CreateDirectory(res resource.Resource) error {
+	if res.IsPublic() {
+		return perror.InvalidArgument("unable to create directory for public space")
+	}
+
 	return s.withRootNoReturn(
 		res,
 		func(root *os.Root, fsPath string) error {
