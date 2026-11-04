@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture
 
 Module: `github.com/Mikhalevich/filestorage` (Go 1.27). The project is at an early stage. There are three binaries:
-- `cmd/web` serves the file storage HTTP endpoints: `GET /files/{user}/{path...}` (list), `POST /files/{user}/{path...}` (multipart upload), `DELETE /files/{user}/{path...}`, `POST /dirs/{user}/{path...}` (create a directory) and `GET /download/{user}/{path...}`, plus `POST /auth/register` and `POST /auth/login` (JSON `{"username","password"}` → `{"token"}`).
+- `cmd/web` serves the file storage HTTP endpoints: `GET /files/{user}/{path...}` (list), `POST /files/{user}/{path...}` (multipart upload), `DELETE /files/{user}/{path...}`, `POST /dirs/{user}/{path...}` (create a directory; always 400 for the `public` user) and `GET /download/{user}/{path...}`, plus `POST /auth/register` and `POST /auth/login` (JSON `{"username","password"}` → `{"token"}`).
 - `cmd/mcp` is an MCP server (see below).
 - `cmd/bot` is a Telegram bot that saves received files into storage (see below).
 
@@ -80,7 +80,7 @@ To add a new binary, follow the `cmd/web` layout:
 
 **MCP server** (`cmd/mcp/internal/app`):
 - Built on `github.com/modelcontextprotocol/go-sdk`. It serves streamable HTTP at `/mcp`, in stateless mode because it exposes only tools. The HTTP server has no write timeout, since SSE responses can stay open. It calls `filesvc` directly, not the web API.
-- Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64), `delete_file` and `create_directory`. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
+- Tools live in `cmd/mcp/internal/app/tool`: `list_files`, `read_file` (UTF-8 content comes back as text, anything else as a blob resource, capped by `limits.max_read_bytes`), `write_file` (optional base64) and `delete_file`. There's no `create_directory`: every tool works on the public space, where `filesvc.CreateDirectory` refuses to create directories. They are typed `mcp.ToolHandlerFor` handlers registered through `handle`. When a handler returns an error, `handle` logs it, and the client sees only the `perror` message, or `internal error` for anything else, so the host's paths never leak.
 - `app.Middleware` is an `mcp.Middleware` that starts a span (named after the method, plus the tool name for `tools/call`) and writes an access log line for each request.
 - Tests drive the tools through `mcp.NewInMemoryTransports` and a real `filesvc` on a temp dir.
 

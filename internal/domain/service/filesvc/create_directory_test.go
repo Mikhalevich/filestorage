@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Mikhalevich/filestorage/internal/domain/model/perror"
+	"github.com/Mikhalevich/filestorage/internal/domain/model/resource"
+	"github.com/Mikhalevich/filestorage/internal/domain/service/filesvc"
 )
 
 func TestCreateDirectory(t *testing.T) {
@@ -91,5 +93,18 @@ func TestCreateDirectoryEscapeRoot(t *testing.T) {
 	}
 
 	_, err := os.Stat(filepath.Join(rootDir, "new"))
+	require.ErrorIs(t, err, fs.ErrNotExist)
+}
+
+func TestCreateDirectoryPublicRejected(t *testing.T) {
+	t.Parallel()
+
+	storageDir := t.TempDir()
+	res := resource.NewPublicResource("new")
+
+	err := filesvc.New(storageDir).CreateDirectory(res)
+	assert.True(t, perror.IsType(err, perror.TypeInvalidArgument), "%v", err)
+
+	_, err = os.Stat(filepath.Join(storageDir, res.FullPath()))
 	require.ErrorIs(t, err, fs.ErrNotExist)
 }

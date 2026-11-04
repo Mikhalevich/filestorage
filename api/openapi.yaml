@@ -235,13 +235,14 @@ paths:
       description: |
         Creates the last path element only: the parent directory must exist.
         An existing file or directory at the path is never replaced.
+        Directories can't be created in the `public` user's space.
       tags: [directories]
       responses:
         "201":
           description: Directory was created.
         "400":
           description: |
-            Invalid directory path. Possible messages: `invalid user`, `invalid directory path`, `not a directory`.
+            Invalid directory path, or the user is `public`. Possible messages: `invalid user`, `invalid directory path`, `not a directory`, `unable to create directory for public space`.
           content:
             text/plain:
               schema:

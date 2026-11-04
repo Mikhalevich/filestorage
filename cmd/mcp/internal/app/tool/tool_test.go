@@ -143,7 +143,7 @@ func TestListTools(t *testing.T) {
 		names = append(names, tl.Name)
 	}
 
-	assert.ElementsMatch(t, []string{"list_files", "read_file", "write_file", "delete_file", "create_directory"}, names)
+	assert.ElementsMatch(t, []string{"list_files", "read_file", "write_file", "delete_file"}, names)
 }
 
 func TestListFiles(t *testing.T) {
@@ -221,24 +221,6 @@ func TestToolErrors(t *testing.T) {
 			wantMsg: "file not found",
 		},
 		{name: "delete dir", tool: "delete_file", args: map[string]any{"path": "."}, wantMsg: "not a regular file"},
-		{
-			name:    "create dir parent not found",
-			tool:    "create_directory",
-			args:    map[string]any{"path": "missing/new"},
-			wantMsg: "parent directory not found",
-		},
-		{
-			name:    "create dir exists",
-			tool:    "create_directory",
-			args:    map[string]any{"path": "c.txt"},
-			wantMsg: "directory already exists",
-		},
-		{
-			name:    "create dir escape root",
-			tool:    "create_directory",
-			args:    map[string]any{"path": "../x"},
-			wantMsg: "invalid directory path",
-		},
 	}
 
 	for _, tc := range tests {
@@ -388,22 +370,4 @@ func TestDeleteFile(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(rootDir, "sub", "c.txt"))
 	assert.DirExists(t, filepath.Join(rootDir, "sub"))
 	assert.Empty(t, listedNames(t, callTool(t, session, "list_files", map[string]any{"path": "sub"})))
-}
-
-func TestCreateDirectory(t *testing.T) {
-	t.Parallel()
-
-	rootDir := setupRoot(t)
-	session := connect(t, rootDir)
-
-	res := callTool(t, session, "create_directory", map[string]any{"path": "sub/new"})
-	require.False(t, res.IsError, "%v", res.Content)
-	assert.Equal(t, "created sub/new", resultText(t, res))
-	assert.DirExists(t, filepath.Join(rootDir, "sub", "new"))
-
-	res = callTool(t, session, "write_file", map[string]any{"dir": "sub/new", "name": "d.txt", "content": "d"})
-	require.False(t, res.IsError, "%v", res.Content)
-
-	listed := callTool(t, session, "list_files", map[string]any{"path": "sub/new"})
-	assert.Equal(t, []string{"d.txt"}, listedNames(t, listed))
 }
